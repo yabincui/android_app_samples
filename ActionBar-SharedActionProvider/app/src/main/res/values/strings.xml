@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">ActionBar-SharedActionProvider</string>
+
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+
+    <string name="quote_1">People aren’t against you; they are for themselves.</string>
+    <string name="quote_2">Climb mountains not so the world can see you, but so you can see the world.</string>
+    <string name="quote_3">You learn more from failure than from success; don’t let it stop you. Failure builds character.</string>
+</resources>

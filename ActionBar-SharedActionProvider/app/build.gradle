@@ -1,0 +1,28 @@
+apply plugin: 'com.android.application'
+
+dependencies {
+    compile 'com.android.support:support-v4:21.0.2'
+
+    compile fileTree(include: ['*.jar'], dir: 'libs')
+}
+
+android {
+    compileSdkVersion 22
+    buildToolsVersion "22.0.1"
+
+    defaultConfig {
+        applicationId "com.yabinc.actionbar_sharedactionprovider"
+        minSdkVersion 21
+        targetSdkVersion 22
+        versionCode 1
+        versionName "1.0"
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+
