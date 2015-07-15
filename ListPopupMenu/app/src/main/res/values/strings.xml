@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">ListPopupMenu</string>
+
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+    <string name="content_open_popup">Open Popup Menu</string>
+</resources>
