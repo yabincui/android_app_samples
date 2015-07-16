@@ -1,6 +1,27 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools" tools:context=".MainActivity">
+
+    <item android:id="@+id/menu_show_title"
+        app:showAsAction="never"
+        android:title="Show Title" />
+
+    <item android:id="@+id/menu_show_log"
+        app:showAsAction="never"
+        android:title="Show Log" />
+
+    <item android:id="@+id/menu_show_image"
+        app:showAsAction="never"
+        android:title="Show Image" />
+
+    <item android:id="@+id/menu_show_grid_image"
+        app:showAsAction="never"
+        android:title="Show Grid Image" />
+
+    <item android:id="@+id/menu_show_delay_thread_button"
+        app:showAsAction="never"
+        android:title="Show Delay Thread Button" />
+
     <item android:id="@+id/action_settings" android:title="@string/action_settings"
         android:orderInCategory="100" app:showAsAction="never" />
 </menu>
