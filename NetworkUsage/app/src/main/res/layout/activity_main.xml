@@ -17,6 +17,20 @@
         android:layout_height="wrap_content"
         android:onClick="onStartHttpPageClick"/>
 
+    <Button
+        android:id="@+id/check_network_state"
+        android:text="Network State Page"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:onClick="onCheckNetworkStateClick"/>
+
+    <Button
+        android:id="@+id/read_http_page_with_setting"
+        android:text="Read Http Page according to network connection"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:onClick="onStartHttpPageWithSettingClick"/>
+
     <fragment
         android:name="com.yabinc.logger.LogFragment"
         android:id="@+id/log_fragment"
