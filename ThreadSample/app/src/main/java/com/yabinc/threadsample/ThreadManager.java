@@ -40,4 +40,8 @@ public class ThreadManager {
     public void runOnThreadPool(Runnable runnable) {
         mThreadPoolExecutor.execute(runnable);
     }
+
+    public void runOnNewThread(final Runnable runnable) {
+        new Thread(runnable).start();
+    }
 }

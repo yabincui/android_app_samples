@@ -215,6 +215,17 @@ public class MainActivity extends AppCompatActivity {
         runByThreadPoolIndex = (runByThreadPoolIndex + 1) % colorArray.length;
     }
 
+    public void onRunBusyThreadClick(View v) {
+        threadManager.runOnNewThread(new Runnable() {
+            @Override
+            public void run() {
+                Log.d(TAG, "Busy thread started");
+                while (true) {
+                }
+            }
+        });
+    }
+
     private class DownloadStateReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {

@@ -71,6 +71,17 @@
                 android:text="I run by thread pool!"
                 android:onClick="onRunByThreadPoolClick"/>
 
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="10px" />
+
+            <Button
+                android:id="@+id/run_busy_thread_button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="I run the busy thread!"
+                android:onClick="onRunBusyThreadClick"/>
+
         </LinearLayout>
 
     </ViewAnimator>
