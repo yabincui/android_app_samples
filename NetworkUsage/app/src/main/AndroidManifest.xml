@@ -23,6 +23,18 @@
             android:name=".HttpPageActivity"
             android:label="@string/title_activity_http_page" >
         </activity>
+        <activity
+            android:name=".NetworkStateActivity"
+            android:label="@string/title_activity_network_state" >
+        </activity>
+        <activity
+            android:name=".SettingActivity"
+            android:label="@string/title_activity_setting" >
+        </activity>
+        <activity
+            android:name=".HttpPageWithSettingActivity"
+            android:label="@string/title_activity_http_page_with_setting" >
+        </activity>
     </application>
 
 </manifest>
