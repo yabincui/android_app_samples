@@ -1,20 +1,20 @@
 package com.yabinc.threadsample3;
 
-import android.app.FragmentManager;
 import android.app.FragmentTransaction;
-import android.os.Build;
+import android.content.Intent;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.ImageView;
 import android.widget.TextView;
+
+import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -28,6 +28,9 @@ public class MainActivity extends AppCompatActivity {
 
     public static final int RSS_LIST_UPDATE = 1;
 
+    private ArrayList<String> mThumbnails = null;
+    private ArrayList<String> mPhotos = null;
+
     private Handler mHandler = new Handler(Looper.getMainLooper()) {
         @Override
         public void handleMessage(Message msg) {
@@ -37,8 +40,10 @@ public class MainActivity extends AppCompatActivity {
                     Log.d(LOG_TAG, "content[" + i + "]: " + rssList.contents.get(i));
                     Log.d(LOG_TAG, "thumb[" + i + "]: " + rssList.thumbnails.get(i));
                 }
+                mThumbnails = rssList.thumbnails;
+                mPhotos = rssList.contents;
                 PhotoThumbnailFragment thumbnailFragment = (PhotoThumbnailFragment) getFragmentManager().findFragmentById(R.id.fragmentHost);
-                thumbnailFragment.setPhotoList(rssList.thumbnails, rssList.contents);
+                thumbnailFragment.setThumbnails(rssList.thumbnails);
                 return;
             }
             super.handleMessage(msg);
@@ -69,7 +74,8 @@ public class MainActivity extends AppCompatActivity {
 
 
         FragmentTransaction transaction = getFragmentManager().beginTransaction();
-        transaction.add(R.id.fragmentHost, new PhotoThumbnailFragment());
+        PhotoThumbnailFragment thumbnailFragment = new PhotoThumbnailFragment();
+        transaction.add(R.id.fragmentHost, thumbnailFragment);
         transaction.commit();
         //setFullScreen(true);
         setContentView(mMainView);
@@ -77,7 +83,45 @@ public class MainActivity extends AppCompatActivity {
         RSSPullThread rssPullThread = new RSSPullThread(mHandler);
         rssPullThread.start();
 
-//        setContentView(R.layout.activity_main);
+        /*
+        thumbnailFragment.registerThumbClickListener(new PhotoThumbnailFragment.ThumbClickListener() {
+            @Override
+            public void onClickThumbnail(PhotoView photoView) {
+                String photo = null;
+                String thumbnail = photoView.getImageURL();
+                if (mThumbnails != null && thumbnail != null) {
+                    for (int i = 0; i < mThumbnails.size(); ++i) {
+                        if (mThumbnails.get(i).equals(thumbnail)) {
+                            photo = mPhotos.get(i);
+                            break;
+                        }
+                    }
+                }
+
+                Intent intent = new Intent(MainActivity.this, PhotoActivity.class);
+                intent.putExtra(PhotoActivity.PHOTO_URL_KEY, photo);
+                startActivity(intent);
+            }
+        });
+        */
+        thumbnailFragment.registerThumbClickListener(new PhotoThumbnailFragment.ThumbClickListener() {
+            @Override
+            public void onClickThumbnail(PhotoView photoView) {
+                int selectedIndex = -1;
+                String thumbnail = photoView.getImageURL();
+                if (mThumbnails != null && thumbnail != null) {
+                    for (int i = 0; i < mThumbnails.size(); ++i) {
+                        if (mThumbnails.get(i).equals(thumbnail)) {
+                            selectedIndex = i;
+                        }
+                    }
+                }
+                Intent intent = new Intent(MainActivity.this, PhotoViewerActivity.class);
+                intent.putStringArrayListExtra(PhotoViewerActivity.PHOTO_URLS_KEY, mPhotos);
+                intent.putExtra(PhotoViewerActivity.SELECTED_PHOTO_INDEX_KEY, selectedIndex);
+                startActivity(intent);
+            }
+        });
     }
 
     @Override

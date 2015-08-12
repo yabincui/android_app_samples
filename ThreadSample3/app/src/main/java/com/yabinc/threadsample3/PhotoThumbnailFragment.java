@@ -2,8 +2,6 @@ package com.yabinc.threadsample3;
 
 import android.app.Fragment;
 import android.content.Context;
-import android.content.Intent;
-import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.util.Log;
@@ -30,7 +28,17 @@ public class PhotoThumbnailFragment extends Fragment implements View.OnClickList
     private GridViewAdapter mAdapter = null;
 
     private ArrayList<String> mThumbnails = null;
-    private ArrayList<String> mContents = null;
+
+    interface ThumbClickListener {
+        public void onClickThumbnail(PhotoView photoView);
+    }
+
+    private ArrayList<ThumbClickListener> mThumbClickListeners = new ArrayList<ThumbClickListener>();
+
+    public void registerThumbClickListener(ThumbClickListener listener) {
+        mThumbClickListeners.add(listener);
+    }
+
 
     @Nullable
     @Override
@@ -46,9 +54,8 @@ public class PhotoThumbnailFragment extends Fragment implements View.OnClickList
         return localView;
     }
 
-    public void setPhotoList(ArrayList<String> thumbnails, ArrayList<String> contents) {
+    public void setThumbnails(ArrayList<String> thumbnails) {
         this.mThumbnails = thumbnails;
-        this.mContents = contents;
         this.mThumbCount = thumbnails.size();
         mAdapter.notifyDataSetChanged();
     }
@@ -96,20 +103,9 @@ public class PhotoThumbnailFragment extends Fragment implements View.OnClickList
     @Override
     public void onClick(View v) {
         PhotoView photoView = (PhotoView) v;
-        Log.d(LOG_TAG, "onClick");
-        String content = null;
-        String thumbnail = photoView.getImageURL();
-        if (mThumbnails != null && thumbnail != null) {
-            for (int i = 0; i < mThumbnails.size(); ++i) {
-                if (mThumbnails.get(i).equals(thumbnail)) {
-                    content = mContents.get(i);
-                    break;
-                }
-            }
+        Log.d(LOG_TAG, "thumbnail onClick");
+        for (int i = 0; i < mThumbClickListeners.size(); ++i) {
+            mThumbClickListeners.get(i).onClickThumbnail(photoView);
         }
-
-        Intent intent = new Intent(getActivity(), PhotoActivity.class);
-        intent.putExtra(PhotoActivity.PHOTO_URL_KEY, content);
-        startActivity(intent);
     }
 }
