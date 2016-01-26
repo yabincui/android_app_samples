@@ -7,13 +7,18 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.os.Handler;
+import android.os.Message;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
 
+import org.w3c.dom.Node;
+
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Queue;
 import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -23,12 +28,11 @@ import java.util.jar.Attributes;
  * Created by yabinc on 1/21/16.
  */
 public class GameView extends View {
-    private static final String LOG_TAG = "GameView";
     private static final int ANIMAL_BITMAP_WIDTH = 100;
     private static final int ANIMAL_BITMAP_HEIGHT = 100;
+    private static final String LOG_TAG = "GameView";
 
-    private int GAME_IMAGE_LENGTH = 14;
-    private int GAME_IMAGE_WIDTH = 9;
+
 
     private Rect viewRect = new Rect();
     private int viewWidth;
@@ -38,7 +42,7 @@ public class GameView extends View {
     private Paint mLinePaint;
     private Paint mSelectedImgPaint;
 
-    private State[][] states;
+    private GameLogic.State[][] states;
 
     int selectedRow = -1;
     int selectedCol = -1;
@@ -46,20 +50,9 @@ public class GameView extends View {
     private GestureDetector mDetector;
 
     private Handler myHandler;
-    private boolean isDrawLine = false;
+    private GameLogic.LinkPath linkPath;
 
-    class State {
-        final static int IMAGE_UNSELECTED = 0;
-        final static int IMAGE_SELECTED = 1;
-        final static int EMPTY = 2;
-        int state;
-        int imgIndex;
 
-        State(int state, int imgIndex) {
-            this.state = state;
-            this.imgIndex = imgIndex;
-        }
-    }
 
     public GameView(Context context, AttributeSet attributeSet) {
         super(context, attributeSet);
@@ -81,7 +74,7 @@ public class GameView extends View {
         mLinePaint.setStrokeWidth(20);
         mSelectedImgPaint = new Paint();
         mSelectedImgPaint.setAlpha(60);
-        myHandler = new Handler();
+        myHandler = new MyHandler();
         mDetector = new GestureDetector(getContext(), new MyGestureListener());
     }
 
@@ -104,45 +97,10 @@ public class GameView extends View {
         viewRect.bottom = h;
         viewRect.left = 0;
         viewRect.right = w;
-        initState();
+        states = GameLogic.initState(w, h, mAnimalBitmaps.size(), states);
     }
 
-    private void initState() {
-        int rows = -1;
-        int cols = -1;
-        if (viewRect.width() > viewRect.height()) {
-            rows = GAME_IMAGE_WIDTH;
-            cols = GAME_IMAGE_LENGTH;
-        } else {
-            rows = GAME_IMAGE_LENGTH;
-            cols = GAME_IMAGE_WIDTH;
-        }
-        if (states != null) {
-            if (states.length == rows && states[0].length == cols) {
-                return;
-            }
-            if (states.length == cols && states[0].length == rows) {
-                // Swap row and col
-                State[][] newStates = new State[rows][cols];
-                for (int i = 0; i < rows; ++i) {
-                    for (int j = 0; j < cols; ++j) {
-                        newStates[i][j] = states[j][i];
-                    }
-                }
-                states = newStates;
-                return;
-            }
-        }
-        // Construct new states.
-        Random random = new Random(0);
-        states = new State[rows][cols];
-        for (int i = 0; i < rows; ++i) {
-            for (int j = 0; j < cols; ++j) {
-                int imgIndex = random.nextInt(mAnimalBitmaps.size());
-                states[i][j] = new State(State.IMAGE_UNSELECTED, imgIndex);
-            }
-        }
-    }
+
 
     @Override
     protected void onDraw(Canvas canvas) {
@@ -156,12 +114,12 @@ public class GameView extends View {
 
         for (int r = 0; r < rows; ++r) {
             for (int c = 0; c < cols; ++c) {
-                if (states[r][c].state == State.IMAGE_UNSELECTED) {
+                if (states[r][c].state == GameLogic.State.IMAGE_UNSELECTED) {
                     canvas.drawBitmap(mAnimalBitmaps.get(states[r][c].imgIndex),
                             new Rect(0, 0, ANIMAL_BITMAP_WIDTH, ANIMAL_BITMAP_HEIGHT),
                             new Rect(c * viewWidth, r * viewHeight,
                                     (c + 1) * viewWidth, (r + 1) * viewHeight), null);
-                } else if (states[r][c].state == State.IMAGE_SELECTED){
+                } else if (states[r][c].state == GameLogic.State.IMAGE_SELECTED){
                     canvas.drawBitmap(mAnimalBitmaps.get(states[r][c].imgIndex),
                             new Rect(0, 0, ANIMAL_BITMAP_WIDTH, ANIMAL_BITMAP_HEIGHT),
                             new Rect(c * viewWidth, r * viewHeight,
@@ -170,8 +128,34 @@ public class GameView extends View {
             }
         }
 
-        if (isDrawLine) {
-            canvas.drawLine(viewWidth / 2, viewHeight / 2, viewWidth * 3 / 2, viewHeight / 2, mLinePaint);
+        if (linkPath != null) {
+            int lineCount = linkPath.pointsR.size() - 1;
+            float[] points = new float[lineCount * 4];
+            for (int i = 0, j = 0; i < linkPath.pointsR.size(); ++i, j += 2) {
+                int r = linkPath.pointsR.get(i);
+                int c = linkPath.pointsC.get(i);
+                if (c >= 0 && c < cols) {
+                    points[j] = c * viewWidth + viewWidth / 2;
+                } else if (c == -1) {
+                    points[j] = 0;
+                } else if (c == cols) {
+                    points[j] = cols * viewWidth;
+                }
+
+                if (r >= 0 && r < rows) {
+                    points[j + 1] = r * viewHeight + viewHeight / 2;
+                } else if (r == -1) {
+                    points[j + 1] = 0;
+                } else if (r == rows) {
+                    points[j + 1] = rows * viewHeight;
+                }
+                if (i > 0 && i < linkPath.pointsR.size() - 1) {
+                    j += 2;
+                    points[j] = points[j - 2];
+                    points[j + 1] = points[j - 1];
+                }
+            }
+            canvas.drawLines(points, mLinePaint);
         }
     }
 
@@ -187,6 +171,7 @@ public class GameView extends View {
         public boolean onSingleTapUp(MotionEvent e) {
             Log.d(LOG_TAG, "onSingleTagUp, e.action = " + e.getAction() + ", X = " + e.getX()
                             + ", Y = " + e.getY());
+            tapPos(e.getX(), e.getY());
             return super.onSingleTapUp(e);
         }
 
@@ -194,7 +179,7 @@ public class GameView extends View {
         public boolean onSingleTapConfirmed(MotionEvent e) {
             Log.d(LOG_TAG, "onSingleTagConfirmed, e.action = " + e.getAction() + ", X = " + e.getX()
                     + ", Y = " + e.getY());
-            tapPos(e.getX(), e.getY());
+
             return super.onSingleTapConfirmed(e);
         }
 
@@ -207,42 +192,61 @@ public class GameView extends View {
     }
 
     private void tapPos(float x, float y) {
+        if (linkPath != null) {
+            return;
+        }
         int c = (int)(x / viewWidth);
         int r = (int)(y / viewHeight);
         if (r < 0 || r >= states.length || c < 0 || c >= states[0].length) {
             return;
         }
         Log.d(LOG_TAG, "tapPos, x " + x + ", y " + y + ", w " + viewWidth + ", h " + viewHeight + ", c " + c + ", r " + r);
-        if (states[r][c].state == State.IMAGE_UNSELECTED) {
-            states[r][c].state = State.IMAGE_SELECTED;
+        if (states[r][c].state == GameLogic.State.IMAGE_UNSELECTED) {
+            states[r][c].state = GameLogic.State.IMAGE_SELECTED;
             if (selectedRow == -1) {
                 selectedRow = r;
                 selectedCol = c;
             } else {
-                if (canErase(r, c, selectedRow, selectedCol)) {
-                    states[r][c].state = State.EMPTY;
-                    states[selectedRow][selectedCol].state = State.EMPTY;
+                GameLogic.LinkPath path = new GameLogic.LinkPath();
+                if (GameLogic.canErase(r, c, selectedRow, selectedCol, states, path)) {
+                    linkPath = path;
                     selectedRow = -1;
                     selectedCol = -1;
+                    myHandler.sendEmptyMessageDelayed(MyHandler.MSG_ERASE_LINK_PATH, 200);
                 } else {
-                    states[selectedRow][selectedCol].state = State.IMAGE_UNSELECTED;
+                    states[selectedRow][selectedCol].state = GameLogic.State.IMAGE_UNSELECTED;
                     selectedRow = r;
                     selectedCol = c;
                 }
             }
-        } else if (states[r][c].state == State.IMAGE_SELECTED) {
-            states[r][c].state = State.IMAGE_UNSELECTED;
+        } else if (states[r][c].state == GameLogic.State.IMAGE_SELECTED) {
+            states[r][c].state = GameLogic.State.IMAGE_UNSELECTED;
             selectedRow = -1;
             selectedCol = -1;
         }
         invalidate();
     }
 
-    private boolean canErase(int r1, int c1, int r2, int c2) {
-        boolean result =  (states[r1][c1].imgIndex == states[r2][c2].imgIndex);
-        Log.d(LOG_TAG, "canErase, " + r1 + ", " + c1 + ", " + r2 + ", " + c2 + ", img " +
-                states[r1][c1].imgIndex + ", " + states[r2][c2].imgIndex + ", res " + result);
-        return result;
+    private class MyHandler extends Handler {
+        static final int MSG_ERASE_LINK_PATH = 0;
+        @Override
+        public void handleMessage(Message msg) {
+            if (msg.what == MSG_ERASE_LINK_PATH) {
+                if (linkPath != null) {
+                    int len = linkPath.pointsR.size();
+                    states[linkPath.pointsR.get(0)][linkPath.pointsC.get(0)].state = GameLogic.State.EMPTY;
+                    states[linkPath.pointsR.get(len-1)][linkPath.pointsC.get(len-1)].state = GameLogic.State.EMPTY;
+                    linkPath = null;
+                    if (!GameLogic.isSuccess(states)) {
+                        GameLogic.LinkPath path = new GameLogic.LinkPath();
+                        while (!GameLogic.haveErasablePair(states, path)) {
+                            GameLogic.shuffleStates(states);
+                        }
+                    }
+                    invalidate();
+                }
+            }
+        }
     }
 
     /*
