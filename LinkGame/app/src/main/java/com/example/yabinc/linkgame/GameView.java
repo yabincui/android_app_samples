@@ -37,37 +37,35 @@ public class GameView extends View {
     private Rect viewRect = new Rect();
     private int viewWidth;
     private int viewHeight;
-    private Bitmap mAnimalBitmap;
+    private Bitmap mWinBitmap;
     private ArrayList<Bitmap> mAnimalBitmaps;
     private Paint mLinePaint;
     private Paint mSelectedImgPaint;
     private Paint mHintPaint;
+
+    private GestureDetector mDetector;
+
+    private Handler myHandler;
 
     private GameLogic.State[][] states;
 
     int selectedRow = -1;
     int selectedCol = -1;
 
-    private GameLogic.LinkPath hintPath;
-
-    private GestureDetector mDetector;
-
-    private Handler myHandler;
     private GameLogic.LinkPath linkPath;
-
-
+    private GameLogic.LinkPath hintPath;
 
     public GameView(Context context, AttributeSet attributeSet) {
         super(context, attributeSet);
     }
 
-    public void init(Bitmap bitmap) {
-        mAnimalBitmap = bitmap;
+    public void init(Bitmap animalBitmap, Bitmap winBitmap) {
+        mWinBitmap = winBitmap;
         mAnimalBitmaps = new ArrayList<Bitmap>();
-        for (int y = 0; y + ANIMAL_BITMAP_HEIGHT <= bitmap.getHeight(); y += ANIMAL_BITMAP_HEIGHT) {
-            for (int x = 0; x + ANIMAL_BITMAP_WIDTH <= bitmap.getWidth(); x += ANIMAL_BITMAP_WIDTH) {
-                if (!isBlank(bitmap, x, y, ANIMAL_BITMAP_WIDTH, ANIMAL_BITMAP_HEIGHT)) {
-                    mAnimalBitmaps.add(Bitmap.createBitmap(bitmap, x, y,
+        for (int y = 0; y + ANIMAL_BITMAP_HEIGHT <= animalBitmap.getHeight(); y += ANIMAL_BITMAP_HEIGHT) {
+            for (int x = 0; x + ANIMAL_BITMAP_WIDTH <= animalBitmap.getWidth(); x += ANIMAL_BITMAP_WIDTH) {
+                if (!isBlank(animalBitmap, x, y, ANIMAL_BITMAP_WIDTH, ANIMAL_BITMAP_HEIGHT)) {
+                    mAnimalBitmaps.add(Bitmap.createBitmap(animalBitmap, x, y,
                             ANIMAL_BITMAP_WIDTH, ANIMAL_BITMAP_HEIGHT));
                 }
             }
@@ -97,6 +95,14 @@ public class GameView extends View {
         return true;
     }
 
+    private void initState() {
+        states = GameLogic.initState(viewRect.width(), viewRect.height(), mAnimalBitmaps.size(), states);
+        selectedRow = -1;
+        selectedCol = -1;
+        linkPath = null;
+        hintPath = null;
+    }
+
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
@@ -104,7 +110,7 @@ public class GameView extends View {
         viewRect.bottom = h;
         viewRect.left = 0;
         viewRect.right = w;
-        states = GameLogic.initState(w, h, mAnimalBitmaps.size(), states);
+        initState();
     }
 
 
@@ -113,6 +119,17 @@ public class GameView extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
         canvas.drawColor(Color.BLUE);
+
+        if (GameLogic.isSuccess(states)) {
+            float factor = Math.min((float)viewRect.width() / mWinBitmap.getWidth(),
+                    (float)viewRect.height() / mWinBitmap.getHeight());
+            int left = (viewRect.width() - (int)(mWinBitmap.getWidth() * factor)) / 2;
+            int top = (viewRect.height() - (int)(mWinBitmap.getHeight() * factor)) / 2;
+            canvas.drawBitmap(mWinBitmap, new Rect(0, 0, mWinBitmap.getWidth(), mWinBitmap.getHeight()),
+                    new Rect(left, top, left + (int)(mWinBitmap.getWidth() * factor),
+                            top + (int)(mWinBitmap.getHeight() * factor)), null);
+            return;
+        }
 
         int rows = states.length;
         int cols = states[0].length;
@@ -274,5 +291,11 @@ public class GameView extends View {
             hintPath = path;
             invalidate();
         }
+    }
+
+    public void restart() {
+        states = null;
+        initState();
+        invalidate();
     }
 }

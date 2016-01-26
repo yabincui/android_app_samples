@@ -27,9 +27,10 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.animals);
+        Bitmap animalBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.animals);
+        Bitmap winBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.win);
         mGameView = (GameView) findViewById(R.id.gameView);
-        mGameView.init(bitmap);
+        mGameView.init(animalBitmap, winBitmap);
     }
 
     @Override
@@ -52,6 +53,11 @@ public class MainActivity extends AppCompatActivity {
         }
         if (id == R.id.action_hint) {
             mGameView.hint();
+            return true;
+        }
+        if (id == R.id.action_restart) {
+            mGameView.restart();
+            return true;
         }
 
         return super.onOptionsItemSelected(item);
