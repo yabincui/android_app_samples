@@ -41,11 +41,14 @@ public class GameView extends View {
     private ArrayList<Bitmap> mAnimalBitmaps;
     private Paint mLinePaint;
     private Paint mSelectedImgPaint;
+    private Paint mHintPaint;
 
     private GameLogic.State[][] states;
 
     int selectedRow = -1;
     int selectedCol = -1;
+
+    private GameLogic.LinkPath hintPath;
 
     private GestureDetector mDetector;
 
@@ -74,6 +77,10 @@ public class GameView extends View {
         mLinePaint.setStrokeWidth(20);
         mSelectedImgPaint = new Paint();
         mSelectedImgPaint.setAlpha(60);
+        mHintPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mHintPaint.setColor(Color.RED);
+        mHintPaint.setStrokeWidth(15);
+        mHintPaint.setStyle(Paint.Style.STROKE);
         myHandler = new MyHandler();
         mDetector = new GestureDetector(getContext(), new MyGestureListener());
     }
@@ -157,6 +164,15 @@ public class GameView extends View {
             }
             canvas.drawLines(points, mLinePaint);
         }
+        if (hintPath != null) {
+            Log.d(LOG_TAG, "draw hintPath");
+            for (int i = 0; i < hintPath.pointsR.size(); i += hintPath.pointsR.size() - 1) {
+                int r = hintPath.pointsR.get(i);
+                int c = hintPath.pointsC.get(i);
+                canvas.drawRect(c * viewWidth, r * viewHeight, (c + 1) * viewWidth,
+                        (r + 1) * viewHeight, mHintPaint);
+            }
+        }
     }
 
     @Override
@@ -212,6 +228,7 @@ public class GameView extends View {
                     linkPath = path;
                     selectedRow = -1;
                     selectedCol = -1;
+                    hintPath = null;
                     myHandler.sendEmptyMessageDelayed(MyHandler.MSG_ERASE_LINK_PATH, 200);
                 } else {
                     states[selectedRow][selectedCol].state = GameLogic.State.IMAGE_UNSELECTED;
@@ -249,36 +266,13 @@ public class GameView extends View {
         }
     }
 
-    /*
-    @Override
-    public void onClick(View view) {
-        myHandler.post(myRunnable);
+    public void hint() {
+        GameLogic.LinkPath path = new GameLogic.LinkPath();
+        Log.d(LOG_TAG, "hint");
+        if (hintPath == null && GameLogic.haveErasablePair(states, path)) {
+            Log.d(LOG_TAG, "haveErasablePair");
+            hintPath = path;
+            invalidate();
+        }
     }
-
-    final Runnable myRunnable = new Runnable() {
-        @Override
-        public void run() {
-            if (isDrawLine == true) {
-                return;
-            }
-            isDrawLine = true;
-            invalidate();
-            final Timer timer = new Timer();
-            timer.schedule(new TimerTask() {
-                @Override
-                public void run() {
-                    myHandler.post(myRunnable2);
-                }
-            }, 1000);
-        }
-    };
-
-    final Runnable myRunnable2 = new Runnable() {
-        @Override
-        public void run() {
-            isDrawLine = false;
-            invalidate();
-        }
-    };
-    */
 }
