@@ -28,20 +28,27 @@ import java.util.jar.Attributes;
  * Created by yabinc on 1/21/16.
  */
 public class GameView extends View {
+
     private static final int ANIMAL_BITMAP_WIDTH = 100;
     private static final int ANIMAL_BITMAP_HEIGHT = 100;
     private static final String LOG_TAG = "GameView";
+    private static final int INIT_TIME_IN_SEC = 5 * 60;
+    private static final int ERASE_INC_TIME_IN_SEC = 5;
 
-
-
-    private Rect viewRect = new Rect();
+    private Timer mTimer;
+    private int leftTimeInSec;
+    private Rect timeRect;
+    private Rect viewRect;
     private int viewWidth;
     private int viewHeight;
     private Bitmap mWinBitmap;
+    private Bitmap mLoseBitmap;
     private ArrayList<Bitmap> mAnimalBitmaps;
     private Paint mLinePaint;
     private Paint mSelectedImgPaint;
     private Paint mHintPaint;
+    private Paint mBlackPaint;
+    private Paint mGreenPaint;
 
     private GestureDetector mDetector;
 
@@ -55,12 +62,14 @@ public class GameView extends View {
     private GameLogic.LinkPath linkPath;
     private GameLogic.LinkPath hintPath;
 
+
     public GameView(Context context, AttributeSet attributeSet) {
         super(context, attributeSet);
     }
 
-    public void init(Bitmap animalBitmap, Bitmap winBitmap) {
+    public void init(Bitmap animalBitmap, Bitmap winBitmap, Bitmap loseBitmap) {
         mWinBitmap = winBitmap;
+        mLoseBitmap = loseBitmap;
         mAnimalBitmaps = new ArrayList<Bitmap>();
         for (int y = 0; y + ANIMAL_BITMAP_HEIGHT <= animalBitmap.getHeight(); y += ANIMAL_BITMAP_HEIGHT) {
             for (int x = 0; x + ANIMAL_BITMAP_WIDTH <= animalBitmap.getWidth(); x += ANIMAL_BITMAP_WIDTH) {
@@ -74,11 +83,18 @@ public class GameView extends View {
         mLinePaint.setColor(Color.RED);
         mLinePaint.setStrokeWidth(20);
         mSelectedImgPaint = new Paint();
-        mSelectedImgPaint.setAlpha(60);
+        mSelectedImgPaint.setAlpha(0xa0);
         mHintPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mHintPaint.setColor(Color.RED);
-        mHintPaint.setStrokeWidth(15);
+        mHintPaint.setStrokeWidth(10);
         mHintPaint.setStyle(Paint.Style.STROKE);
+        mBlackPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mBlackPaint.setColor(Color.BLACK);
+        mBlackPaint.setStrokeWidth(10);
+        mBlackPaint.setStyle(Paint.Style.STROKE);
+        mGreenPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mGreenPaint.setColor(Color.GREEN);
+        mGreenPaint.setStyle(Paint.Style.FILL);
         myHandler = new MyHandler();
         mDetector = new GestureDetector(getContext(), new MyGestureListener());
     }
@@ -96,24 +112,33 @@ public class GameView extends View {
     }
 
     private void initState() {
-        states = GameLogic.initState(viewRect.width(), viewRect.height(), mAnimalBitmaps.size(), states);
+        states = GameLogic.initState(viewRect.width(), viewRect.height(), mAnimalBitmaps.size(),
+                getResources().getDisplayMetrics().densityDpi, states);
         selectedRow = -1;
         selectedCol = -1;
         linkPath = null;
         hintPath = null;
+        leftTimeInSec = INIT_TIME_IN_SEC;
+        startTimer();
     }
 
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
-        viewRect.top = 0;
-        viewRect.bottom = h;
-        viewRect.left = 0;
-        viewRect.right = w;
+        timeRect = new Rect(0, 0, w, h / 10);
+        viewRect = new Rect(0, timeRect.bottom, w, h);
         initState();
     }
 
-
+    private void showImage(Canvas canvas, Bitmap bitmap) {
+        float factor = Math.min((float)viewRect.width() / bitmap.getWidth(),
+                (float)viewRect.height() / bitmap.getHeight());
+        int left = (viewRect.width() - (int)(bitmap.getWidth() * factor)) / 2;
+        int top = (viewRect.height() - (int)(bitmap.getHeight() * factor)) / 2;
+        canvas.drawBitmap(bitmap, new Rect(0, 0, bitmap.getWidth(), bitmap.getHeight()),
+                new Rect(left, top, left + (int)(bitmap.getWidth() * factor),
+                        top + (int)(bitmap.getHeight() * factor)), null);
+    }
 
     @Override
     protected void onDraw(Canvas canvas) {
@@ -121,33 +146,47 @@ public class GameView extends View {
         canvas.drawColor(Color.BLUE);
 
         if (GameLogic.isSuccess(states)) {
-            float factor = Math.min((float)viewRect.width() / mWinBitmap.getWidth(),
-                    (float)viewRect.height() / mWinBitmap.getHeight());
-            int left = (viewRect.width() - (int)(mWinBitmap.getWidth() * factor)) / 2;
-            int top = (viewRect.height() - (int)(mWinBitmap.getHeight() * factor)) / 2;
-            canvas.drawBitmap(mWinBitmap, new Rect(0, 0, mWinBitmap.getWidth(), mWinBitmap.getHeight()),
-                    new Rect(left, top, left + (int)(mWinBitmap.getWidth() * factor),
-                            top + (int)(mWinBitmap.getHeight() * factor)), null);
+            showImage(canvas, mWinBitmap);
+            stopTimer();
             return;
         }
+        if (leftTimeInSec == 0) {
+            showImage(canvas, mLoseBitmap);
+            stopTimer();
+            return;
+        }
+
+        int timeWidth = timeRect.width() * 2 / 3;
+        int timeHeight = Math.min(timeRect.height() * 2 / 3, 50);
+        Rect timeR = new Rect();
+        timeR.left = timeRect.left + (timeRect.width() - timeWidth) / 2;
+        timeR.right = timeR.left + timeWidth;
+        timeR.top = timeRect.top + (timeRect.height() - timeHeight) / 2;
+        timeR.bottom = timeR.top + timeHeight;
+        canvas.drawRect(timeR, mBlackPaint);
+        timeR.right = timeR.left + timeR.width() * leftTimeInSec / INIT_TIME_IN_SEC;
+        canvas.drawRect(timeR, mGreenPaint);
 
         int rows = states.length;
         int cols = states[0].length;
         viewWidth = Math.min(viewRect.width() / cols, viewRect.height() / rows);
         viewHeight = viewWidth;
+        Log.d(LOG_TAG, "r " + rows + ", c " + cols + ", w " + viewRect.width() + ", h " + viewRect.height() + "vw " + viewWidth);
 
+        Rect src = new Rect(0, 0, ANIMAL_BITMAP_WIDTH, ANIMAL_BITMAP_HEIGHT);
+        Rect dst = new Rect();
         for (int r = 0; r < rows; ++r) {
             for (int c = 0; c < cols; ++c) {
                 if (states[r][c].state == GameLogic.State.IMAGE_UNSELECTED) {
+                    dst.set(0, 0, viewWidth, viewHeight);
+                    dst.offset(viewRect.left + c * viewWidth, viewRect.top + r * viewHeight);
                     canvas.drawBitmap(mAnimalBitmaps.get(states[r][c].imgIndex),
-                            new Rect(0, 0, ANIMAL_BITMAP_WIDTH, ANIMAL_BITMAP_HEIGHT),
-                            new Rect(c * viewWidth, r * viewHeight,
-                                    (c + 1) * viewWidth, (r + 1) * viewHeight), null);
+                            src, dst, null);
                 } else if (states[r][c].state == GameLogic.State.IMAGE_SELECTED){
+                    dst.set(0, 0, viewWidth, viewHeight);
+                    dst.offset(viewRect.left + c * viewWidth, viewRect.top + r * viewHeight);
                     canvas.drawBitmap(mAnimalBitmaps.get(states[r][c].imgIndex),
-                            new Rect(0, 0, ANIMAL_BITMAP_WIDTH, ANIMAL_BITMAP_HEIGHT),
-                            new Rect(c * viewWidth, r * viewHeight,
-                                    (c + 1) * viewWidth, (r + 1) * viewHeight), mSelectedImgPaint);
+                            src, dst, mSelectedImgPaint);
                 }
             }
         }
@@ -165,6 +204,7 @@ public class GameView extends View {
                 } else if (c == cols) {
                     points[j] = cols * viewWidth;
                 }
+                points[j] += viewRect.left;
 
                 if (r >= 0 && r < rows) {
                     points[j + 1] = r * viewHeight + viewHeight / 2;
@@ -173,6 +213,7 @@ public class GameView extends View {
                 } else if (r == rows) {
                     points[j + 1] = rows * viewHeight;
                 }
+                points[j + 1] += viewRect.top;
                 if (i > 0 && i < linkPath.pointsR.size() - 1) {
                     j += 2;
                     points[j] = points[j - 2];
@@ -186,8 +227,9 @@ public class GameView extends View {
             for (int i = 0; i < hintPath.pointsR.size(); i += hintPath.pointsR.size() - 1) {
                 int r = hintPath.pointsR.get(i);
                 int c = hintPath.pointsC.get(i);
-                canvas.drawRect(c * viewWidth, r * viewHeight, (c + 1) * viewWidth,
-                        (r + 1) * viewHeight, mHintPaint);
+                dst.set(0, 0, viewWidth, viewHeight);
+                dst.offset(viewRect.left + c * viewWidth, viewRect.top + r * viewHeight);
+                canvas.drawRect(dst, mHintPaint);
             }
         }
     }
@@ -225,9 +267,15 @@ public class GameView extends View {
     }
 
     private void tapPos(float x, float y) {
-        if (linkPath != null) {
+        if (GameLogic.isSuccess(states) || leftTimeInSec == 0) {
+            restart();
             return;
         }
+        if (linkPath != null || !viewRect.contains((int)x, (int)y)) {
+            return;
+        }
+        x -= viewRect.left;
+        y -= viewRect.top;
         int c = (int)(x / viewWidth);
         int r = (int)(y / viewHeight);
         if (r < 0 || r >= states.length || c < 0 || c >= states[0].length) {
@@ -246,6 +294,7 @@ public class GameView extends View {
                     selectedRow = -1;
                     selectedCol = -1;
                     hintPath = null;
+                    leftTimeInSec = Math.min(leftTimeInSec + ERASE_INC_TIME_IN_SEC, INIT_TIME_IN_SEC);
                     myHandler.sendEmptyMessageDelayed(MyHandler.MSG_ERASE_LINK_PATH, 200);
                 } else {
                     states[selectedRow][selectedCol].state = GameLogic.State.IMAGE_UNSELECTED;
@@ -263,6 +312,8 @@ public class GameView extends View {
 
     private class MyHandler extends Handler {
         static final int MSG_ERASE_LINK_PATH = 0;
+        static final int MSG_UPDATE_TIME = 1;
+
         @Override
         public void handleMessage(Message msg) {
             if (msg.what == MSG_ERASE_LINK_PATH) {
@@ -277,6 +328,11 @@ public class GameView extends View {
                             GameLogic.shuffleStates(states);
                         }
                     }
+                    invalidate();
+                }
+            } else if (msg.what == MSG_UPDATE_TIME) {
+                if (leftTimeInSec != 0) {
+                    leftTimeInSec--;
                     invalidate();
                 }
             }
@@ -297,5 +353,24 @@ public class GameView extends View {
         states = null;
         initState();
         invalidate();
+    }
+
+    public void startTimer() {
+        if (mTimer == null) {
+            mTimer = new Timer();
+            mTimer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    myHandler.sendEmptyMessage(MyHandler.MSG_UPDATE_TIME);
+                }
+            }, 1000, 1000);
+        }
+    }
+
+    public void stopTimer() {
+        if (mTimer != null) {
+            mTimer.cancel();
+        }
+        mTimer = null;
     }
 }

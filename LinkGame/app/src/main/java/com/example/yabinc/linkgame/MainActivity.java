@@ -29,8 +29,9 @@ public class MainActivity extends AppCompatActivity {
 
         Bitmap animalBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.animals);
         Bitmap winBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.win);
+        Bitmap loseBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.lose);
         mGameView = (GameView) findViewById(R.id.gameView);
-        mGameView.init(animalBitmap, winBitmap);
+        mGameView.init(animalBitmap, winBitmap, loseBitmap);
     }
 
     @Override
@@ -61,5 +62,21 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        if (mGameView != null) {
+            mGameView.startTimer();
+        }
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (mGameView != null) {
+            mGameView.stopTimer();
+        }
     }
 }

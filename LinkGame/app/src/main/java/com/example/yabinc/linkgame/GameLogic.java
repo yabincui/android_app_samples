@@ -1,5 +1,7 @@
 package com.example.yabinc.linkgame;
 
+import android.util.Log;
+
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Queue;
@@ -9,6 +11,10 @@ import java.util.Random;
  * Created by yabinc on 1/23/16.
  */
 public class GameLogic {
+    private static final String LOG_TAG = "GameLogic";
+    private static final float ANIMAL_MIN_INCH = 0.2f;
+    private static final int MAX_ITEMS = 14 * 14;
+
     static class State {
         final static int IMAGE_UNSELECTED = 0;
         final static int IMAGE_SELECTED = 1;
@@ -40,20 +46,27 @@ public class GameLogic {
         }
     }
 
-    private static final int GAME_IMAGE_LENGTH = 14;
-    private static final int GAME_IMAGE_WIDTH = 9;
 
     public static State[][] initState(int graphWidth, int graphHeight, int imgCount,
-                                      State[][] oldStates) {
-        int rows = -1;
+                                      int dotsPerInch, State[][] oldStates) {
+
+        int minDot = (int)(dotsPerInch * ANIMAL_MIN_INCH);
+        int dot = minDot;
         int cols = -1;
-        if (graphWidth > graphHeight) {
-            rows = GAME_IMAGE_WIDTH;
-            cols = GAME_IMAGE_LENGTH;
-        } else {
-            rows = GAME_IMAGE_LENGTH;
-            cols = GAME_IMAGE_WIDTH;
+        int rows = -1;
+        while (true) {
+            cols = graphWidth / dot;
+            rows = graphHeight / dot;
+            if (rows % 2 != 0 && cols % 2 != 0) {
+                rows--;
+            }
+            if (rows * cols <= MAX_ITEMS) {
+                break;
+            }
+            dot++;
         }
+        Log.d(LOG_TAG, "dotsPerInch = " + dotsPerInch + ", minDot = " + minDot + ", dot = " + dot);
+        Log.d(LOG_TAG, "w = " + graphWidth + ", h = " + graphHeight + ", r " + rows + ", c " + cols);
 
         if (oldStates != null) {
             if (oldStates.length == rows && oldStates[0].length == cols) {
@@ -71,7 +84,7 @@ public class GameLogic {
             }
         }
         // Construct new states.
-        Random random = new Random(0);
+        Random random = new Random();
         int[] indexArray = new int[rows * cols];
         for (int i = 0; i < indexArray.length; i += 2) {
             indexArray[i] = indexArray[i + 1] = random.nextInt(imgCount);
