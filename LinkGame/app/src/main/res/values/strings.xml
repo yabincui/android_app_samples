@@ -1,4 +1,15 @@
 <resources>
     <string name="app_name">LinkGame</string>
     <string name="action_settings">Settings</string>
+    <string-array name="level_names">
+        <item>Level 1 Start Up</item>
+        <item>Level 2 Go Up</item>
+        <item>Level 3 Go Down</item>
+        <item>Level 4 Go Left</item>
+        <item>Level 5 Go Right</item>
+        <item>Level 6 Up Down Split</item>
+        <item>Level 7 Left Right Split</item>
+        <item>Level 8 Go Inner</item>
+        <item>Level 9 Go Outer</item>
+    </string-array>
 </resources>

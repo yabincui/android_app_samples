@@ -17,8 +17,8 @@ import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
     private static final String LOG_TAG = "MainActivity";
-
     private GameView mGameView;
+    private String[] levels;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,6 +32,12 @@ public class MainActivity extends AppCompatActivity {
         Bitmap loseBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.lose);
         mGameView = (GameView) findViewById(R.id.gameView);
         mGameView.init(animalBitmap, winBitmap, loseBitmap);
+        String[] levels = getResources().getStringArray(R.array.level_names);
+        setLevelName(levels[0]);
+    }
+
+    private void setLevelName(String name) {
+        setTitle(name);
     }
 
     @Override

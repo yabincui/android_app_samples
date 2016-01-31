@@ -35,6 +35,7 @@ public class GameView extends View {
     private static final int INIT_TIME_IN_SEC = 5 * 60;
     private static final int ERASE_INC_TIME_IN_SEC = 5;
 
+    private int mLevel;
     private Timer mTimer;
     private int leftTimeInSec;
     private Rect timeRect;
@@ -97,6 +98,7 @@ public class GameView extends View {
         mGreenPaint.setStyle(Paint.Style.FILL);
         myHandler = new MyHandler();
         mDetector = new GestureDetector(getContext(), new MyGestureListener());
+        mLevel = 1;
     }
 
     private boolean isBlank(Bitmap bitmap, int x, int y, int width, int height) {
@@ -372,5 +374,10 @@ public class GameView extends View {
             mTimer.cancel();
         }
         mTimer = null;
+    }
+
+    public void setLevel(int level) {
+        mLevel = level;
+        invalidate();
     }
 }
