@@ -35,6 +35,7 @@ public class GameView extends View {
     private static final int INIT_TIME_IN_SEC = 5 * 60;
     private static final int ERASE_INC_TIME_IN_SEC = 5;
 
+    private int mLevelCount;
     private int mLevel;
     private Timer mTimer;
     private int leftTimeInSec;
@@ -68,7 +69,8 @@ public class GameView extends View {
         super(context, attributeSet);
     }
 
-    public void init(Bitmap animalBitmap, Bitmap winBitmap, Bitmap loseBitmap) {
+    public void init(Bitmap animalBitmap, Bitmap winBitmap, Bitmap loseBitmap, int levelCount) {
+        mLevelCount = levelCount;
         mWinBitmap = winBitmap;
         mLoseBitmap = loseBitmap;
         mAnimalBitmaps = new ArrayList<Bitmap>();
@@ -122,6 +124,7 @@ public class GameView extends View {
         hintPath = null;
         leftTimeInSec = INIT_TIME_IN_SEC;
         startTimer();
+        ((MainActivity)getContext()).setTitleByLevel(mLevel);
     }
 
     @Override
@@ -270,7 +273,8 @@ public class GameView extends View {
 
     private void tapPos(float x, float y) {
         if (GameLogic.isSuccess(states) || leftTimeInSec == 0) {
-            restart();
+            Log.d(LOG_TAG, "tapPos, isSuccess = " + GameLogic.isSuccess(states));
+            restart(GameLogic.isSuccess(states));
             return;
         }
         if (linkPath != null || !viewRect.contains((int)x, (int)y)) {
@@ -325,9 +329,11 @@ public class GameView extends View {
                     states[linkPath.pointsR.get(len-1)][linkPath.pointsC.get(len-1)].state = GameLogic.State.EMPTY;
                     linkPath = null;
                     if (!GameLogic.isSuccess(states)) {
+                        GameLogic.updateStateByLevel(states, mLevel);
                         GameLogic.LinkPath path = new GameLogic.LinkPath();
                         while (!GameLogic.haveErasablePair(states, path)) {
                             GameLogic.shuffleStates(states);
+                            GameLogic.updateStateByLevel(states, mLevel);
                         }
                     }
                     invalidate();
@@ -351,7 +357,15 @@ public class GameView extends View {
         }
     }
 
-    public void restart() {
+    public void restart(boolean isSuccess) {
+        Log.d(LOG_TAG, "restart, isSuccess = " + isSuccess + ", level = " + mLevel);
+        if (isSuccess) {
+            mLevel = (mLevel + 1) % (mLevelCount + 1);
+            if (mLevel == 0) {
+                mLevel = 1;
+            }
+            Log.d(LOG_TAG, "goto level " + mLevel);
+        }
         states = null;
         initState();
         invalidate();
@@ -378,6 +392,6 @@ public class GameView extends View {
 
     public void setLevel(int level) {
         mLevel = level;
-        invalidate();
+        restart(false);
     }
 }

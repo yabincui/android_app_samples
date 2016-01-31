@@ -27,17 +27,17 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
+        levels = getResources().getStringArray(R.array.level_names);
         Bitmap animalBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.animals);
         Bitmap winBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.win);
         Bitmap loseBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.lose);
         mGameView = (GameView) findViewById(R.id.gameView);
-        mGameView.init(animalBitmap, winBitmap, loseBitmap);
-        String[] levels = getResources().getStringArray(R.array.level_names);
-        setLevelName(levels[0]);
+        mGameView.init(animalBitmap, winBitmap, loseBitmap, levels.length);
+
     }
 
-    private void setLevelName(String name) {
-        setTitle(name);
+    public void setTitleByLevel(int level) {
+        setTitle(levels[level - 1]);
     }
 
     @Override
@@ -63,7 +63,11 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
         if (id == R.id.action_restart) {
-            mGameView.restart();
+            mGameView.restart(false);
+            return true;
+        }
+        if (id == R.id.action_set_level_2) {
+            mGameView.setLevel(2);
             return true;
         }
 

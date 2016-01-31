@@ -26,6 +26,12 @@ public class GameLogic {
             this.state = state;
             this.imgIndex = imgIndex;
         }
+
+        final static private State emptyState = new State(EMPTY, -1);
+
+        static State getEmptyState() {
+            return emptyState;
+        }
     }
 
     private static final int DIR_NONE = -1;
@@ -230,5 +236,25 @@ public class GameLogic {
             }
         }
         return true;
+    }
+
+    private static StateUpdateStrategy getStrategyByLevel(int level) {
+        switch (level) {
+            case 1: return new StateUpdateStrategyKeep();
+            case 2: return new StateUpdateStrategyGoUp();
+            case 3: return new StateUpdateStrategyGoDown();
+            case 4: return new StateUpdateStrategyGoLeft();
+            case 5: return new StateUpdateStrategyGoRight();
+            case 6: return new StateUpdateStrategyUpDownSplit();
+            case 7: return new StateUpdateStrategyLeftRightSplit();
+            case 8: return new StateUpdateStrategyGoInner();
+            case 9: return new StateUpdateStrategyGoOuter();
+        }
+        return new StateUpdateStrategyKeep();
+    }
+
+    public static void updateStateByLevel(State[][] states, int level) {
+        StateUpdateStrategy strategy = getStrategyByLevel(level);
+        strategy.updateStates(states);
     }
 }
