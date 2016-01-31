@@ -79,7 +79,7 @@ public class GameView extends View implements GameState.OnStateChangeListener {
         }
 
         void moveToNextLevel() {
-            curLevel = (curLevel + 1) % maxLevel;
+            curLevel = (curLevel + 1) % (maxLevel + 1);
             if (curLevel == 0) {
                 curLevel = 1;
             }

@@ -126,12 +126,13 @@ class GameState {
                     selectedCol = col;
                 }
             }
-        } else {
+            onStateChange();
+        } else if (blocks[row][col].state == Block.STATE_IMAGE_SELECTED) {
             blocks[row][col].state = Block.STATE_IMAGE_UNSELECTED;
             selectedRow = -1;
             selectedCol = -1;
+            onStateChange();
         }
-        onStateChange();
     }
 
     private void onStateChange() {
