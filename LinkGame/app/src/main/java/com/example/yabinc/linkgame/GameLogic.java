@@ -15,6 +15,9 @@ public class GameLogic {
     private static final float ANIMAL_MIN_INCH = 0.2f;
     private static final int MAX_ITEMS = 14 * 14;
 
+    public static final int DEFAULT_ROWS = 14;
+    public static final int DEFAULT_COLS = 9;
+
     static class State {
         final static int IMAGE_UNSELECTED = 0;
         final static int IMAGE_SELECTED = 1;
@@ -74,6 +77,44 @@ public class GameLogic {
         Log.d(LOG_TAG, "dotsPerInch = " + dotsPerInch + ", minDot = " + minDot + ", dot = " + dot);
         Log.d(LOG_TAG, "w = " + graphWidth + ", h = " + graphHeight + ", r " + rows + ", c " + cols);
 
+        if (oldStates != null) {
+            if (oldStates.length == rows && oldStates[0].length == cols) {
+                return oldStates;
+            }
+            if (oldStates.length == cols && oldStates[0].length == rows) {
+                // Swap row and col
+                State[][] newStates = new State[rows][cols];
+                for (int i = 0; i < rows; ++i) {
+                    for (int j = 0; j < cols; ++j) {
+                        newStates[i][j] = oldStates[j][i];
+                    }
+                }
+                return newStates;
+            }
+        }
+        // Construct new states.
+        Random random = new Random();
+        int[] indexArray = new int[rows * cols];
+        for (int i = 0; i < indexArray.length; i += 2) {
+            indexArray[i] = indexArray[i + 1] = random.nextInt(imgCount);
+        }
+        for (int i = 0; i < indexArray.length; ++i) {
+            int j = random.nextInt(indexArray.length);
+            int temp = indexArray[i];
+            indexArray[i] = indexArray[j];
+            indexArray[j] = temp;
+        }
+
+        State[][] states = new State[rows][cols];
+        for (int i = 0; i < rows; ++i) {
+            for (int j = 0; j < cols; ++j) {
+                states[i][j] = new State(State.IMAGE_UNSELECTED, indexArray[i * cols + j]);
+            }
+        }
+        return states;
+    }
+
+    public static State[][] initState(int rows, int cols, int imgCount, State[][] oldStates) {
         if (oldStates != null) {
             if (oldStates.length == rows && oldStates[0].length == cols) {
                 return oldStates;

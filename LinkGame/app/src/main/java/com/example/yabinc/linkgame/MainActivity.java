@@ -1,5 +1,7 @@
 package com.example.yabinc.linkgame;
 
+import android.app.DialogFragment;
+import android.app.FragmentTransaction;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -12,13 +14,17 @@ import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity
+        implements SelectSizeDialogFragment.SelectSizeDialogListener,
+        SelectLevelDialogFragment.SelectLevelDialogListener {
+
     private static final String LOG_TAG = "MainActivity";
     private GameView mGameView;
-    private String[] levels;
+    private String[] levelNames;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -27,17 +33,17 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        levels = getResources().getStringArray(R.array.level_names);
+        levelNames = getResources().getStringArray(R.array.level_names);
         Bitmap animalBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.animals);
         Bitmap winBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.win);
         Bitmap loseBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.lose);
         mGameView = (GameView) findViewById(R.id.gameView);
-        mGameView.init(animalBitmap, winBitmap, loseBitmap, levels.length);
+        mGameView.init(animalBitmap, winBitmap, loseBitmap, levelNames.length);
 
     }
 
     public void setTitleByLevel(int level) {
-        setTitle(levels[level - 1]);
+        setTitle(levelNames[level - 1]);
     }
 
     @Override
@@ -66,8 +72,12 @@ public class MainActivity extends AppCompatActivity {
             mGameView.restart(false);
             return true;
         }
-        if (id == R.id.action_set_level_2) {
-            mGameView.setLevel(2);
+        if (id == R.id.action_select_size) {
+            showSelectSizeDialog();
+            return true;
+        }
+        if (id == R.id.action_select_level) {
+            showSelectLevelDialog();
             return true;
         }
 
@@ -88,5 +98,36 @@ public class MainActivity extends AppCompatActivity {
         if (mGameView != null) {
             mGameView.stopTimer();
         }
+    }
+
+    private void showSelectSizeDialog() {
+        GameView.SizeInfo sizeInfo = mGameView.getSize();
+        FragmentTransaction ft = getFragmentManager().beginTransaction();
+        DialogFragment f = SelectSizeDialogFragment.newInstance(sizeInfo.useDefaultSize, sizeInfo.rows, sizeInfo.cols);
+        f.show(ft, "dialog");
+    }
+
+    @Override
+    public void onSelectSize(boolean useDefault, int rows, int cols) {
+        if (!useDefault) {
+            if (rows <= 0 || rows >= 40 || cols <= 0 || cols >= 40 || (rows * cols % 2 == 1)) {
+                Toast.makeText(this, "Invalid select size, row/col in range [1,39], row * col should be even",
+                        Toast.LENGTH_SHORT).show();
+                return;
+            }
+        }
+        mGameView.setSize(useDefault, rows, cols);
+    }
+
+    private void showSelectLevelDialog() {
+        FragmentTransaction ft = getFragmentManager().beginTransaction();
+        GameView.LevelInfo levelInfo = mGameView.getLevelInfo();
+        DialogFragment f = SelectLevelDialogFragment.newInstance(levelInfo.curLevel, levelInfo.maxLevel, levelNames);
+        f.show(ft, "dialog");
+    }
+
+    @Override
+    public void onSelectLevel(int level) {
+        mGameView.setCurLevel(level);
     }
 }

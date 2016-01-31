@@ -283,7 +283,7 @@ class StateUpdateStrategyGoOuter implements StateUpdateStrategy {
                     continue;
                 }
                 int prevR = r;
-                while (prevR -1 < halfRows && states[prevR - 1][c].state == GameLogic.State.EMPTY) {
+                while (prevR -1 >= 0 && states[prevR - 1][c].state == GameLogic.State.EMPTY) {
                     prevR--;
                 }
                 if (prevR != r) {
@@ -298,7 +298,7 @@ class StateUpdateStrategyGoOuter implements StateUpdateStrategy {
                     continue;
                 }
                 int nextR = r;
-                while (nextR + 1 >= halfRows && states[nextR + 1][c].state == GameLogic.State.EMPTY) {
+                while (nextR + 1 < rows && states[nextR + 1][c].state == GameLogic.State.EMPTY) {
                     nextR++;
                 }
                 if (nextR != r) {
@@ -313,7 +313,7 @@ class StateUpdateStrategyGoOuter implements StateUpdateStrategy {
                     continue;
                 }
                 int prevC = c;
-                while (prevC - 1 < halfCols && states[r][prevC - 1].state == GameLogic.State.EMPTY) {
+                while (prevC - 1 >= 0 && states[r][prevC - 1].state == GameLogic.State.EMPTY) {
                     prevC--;
                 }
                 if (prevC != c) {
@@ -328,7 +328,7 @@ class StateUpdateStrategyGoOuter implements StateUpdateStrategy {
                     continue;
                 }
                 int nextC = c;
-                while (nextC + 1 >= halfCols && states[r][nextC + 1].state == GameLogic.State.EMPTY) {
+                while (nextC + 1 < cols && states[r][nextC + 1].state == GameLogic.State.EMPTY) {
                     nextC++;
                 }
                 if (nextC != c) {

@@ -7,6 +7,8 @@
         android:orderInCategory="100" app:showAsAction="never" />
     <item android:id="@+id/action_restart" android:title="Restart"
         android:orderInCategory="100" app:showAsAction="never" />
-    <item android:id="@+id/action_set_level_2" android:title="Level 2"
+    <item android:id="@+id/action_select_size" android:title="Select Size"
+        android:orderInCategory="100" app:showAsAction="never" />
+    <item android:id="@+id/action_select_level" android:title="Select Level"
         android:orderInCategory="100" app:showAsAction="never" />
 </menu>

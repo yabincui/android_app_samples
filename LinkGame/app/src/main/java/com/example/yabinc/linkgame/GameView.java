@@ -35,8 +35,7 @@ public class GameView extends View {
     private static final int INIT_TIME_IN_SEC = 5 * 60;
     private static final int ERASE_INC_TIME_IN_SEC = 5;
 
-    private int mLevelCount;
-    private int mLevel;
+    private LevelInfo mLevelInfo;
     private Timer mTimer;
     private int leftTimeInSec;
     private Rect timeRect;
@@ -56,6 +55,7 @@ public class GameView extends View {
 
     private Handler myHandler;
 
+    private SizeInfo mSizeInfo;
     private GameLogic.State[][] states;
 
     int selectedRow = -1;
@@ -70,7 +70,7 @@ public class GameView extends View {
     }
 
     public void init(Bitmap animalBitmap, Bitmap winBitmap, Bitmap loseBitmap, int levelCount) {
-        mLevelCount = levelCount;
+        mLevelInfo = new LevelInfo(1, levelCount);
         mWinBitmap = winBitmap;
         mLoseBitmap = loseBitmap;
         mAnimalBitmaps = new ArrayList<Bitmap>();
@@ -100,7 +100,7 @@ public class GameView extends View {
         mGreenPaint.setStyle(Paint.Style.FILL);
         myHandler = new MyHandler();
         mDetector = new GestureDetector(getContext(), new MyGestureListener());
-        mLevel = 1;
+        mSizeInfo = new SizeInfo(true, -1, -1);
     }
 
     private boolean isBlank(Bitmap bitmap, int x, int y, int width, int height) {
@@ -116,15 +116,19 @@ public class GameView extends View {
     }
 
     private void initState() {
-        states = GameLogic.initState(viewRect.width(), viewRect.height(), mAnimalBitmaps.size(),
-                getResources().getDisplayMetrics().densityDpi, states);
+        if (mSizeInfo.useDefaultSize) {
+            states = GameLogic.initState(viewRect.width(), viewRect.height(), mAnimalBitmaps.size(),
+                    getResources().getDisplayMetrics().densityDpi, states);
+        } else {
+            states = GameLogic.initState(mSizeInfo.rows, mSizeInfo.cols, mAnimalBitmaps.size(), states);
+        }
         selectedRow = -1;
         selectedCol = -1;
         linkPath = null;
         hintPath = null;
         leftTimeInSec = INIT_TIME_IN_SEC;
         startTimer();
-        ((MainActivity)getContext()).setTitleByLevel(mLevel);
+        ((MainActivity)getContext()).setTitleByLevel(mLevelInfo.curLevel);
     }
 
     @Override
@@ -141,8 +145,8 @@ public class GameView extends View {
         int left = (viewRect.width() - (int)(bitmap.getWidth() * factor)) / 2;
         int top = (viewRect.height() - (int)(bitmap.getHeight() * factor)) / 2;
         canvas.drawBitmap(bitmap, new Rect(0, 0, bitmap.getWidth(), bitmap.getHeight()),
-                new Rect(left, top, left + (int)(bitmap.getWidth() * factor),
-                        top + (int)(bitmap.getHeight() * factor)), null);
+                new Rect(left, top, left + (int) (bitmap.getWidth() * factor),
+                        top + (int) (bitmap.getHeight() * factor)), null);
     }
 
     @Override
@@ -250,8 +254,7 @@ public class GameView extends View {
         @Override
         public boolean onSingleTapUp(MotionEvent e) {
             Log.d(LOG_TAG, "onSingleTagUp, e.action = " + e.getAction() + ", X = " + e.getX()
-                            + ", Y = " + e.getY());
-            tapPos(e.getX(), e.getY());
+                    + ", Y = " + e.getY());
             return super.onSingleTapUp(e);
         }
 
@@ -267,6 +270,7 @@ public class GameView extends View {
         public boolean onDown(MotionEvent e) {
             Log.d(LOG_TAG, "onDown, e.action = " + e.getAction() + ", X = " + e.getX()
                     + ", Y = " + e.getY());
+            tapPos(e.getX(), e.getY());
             return true;
         }
     }
@@ -329,11 +333,11 @@ public class GameView extends View {
                     states[linkPath.pointsR.get(len-1)][linkPath.pointsC.get(len-1)].state = GameLogic.State.EMPTY;
                     linkPath = null;
                     if (!GameLogic.isSuccess(states)) {
-                        GameLogic.updateStateByLevel(states, mLevel);
+                        GameLogic.updateStateByLevel(states, mLevelInfo.curLevel);
                         GameLogic.LinkPath path = new GameLogic.LinkPath();
                         while (!GameLogic.haveErasablePair(states, path)) {
                             GameLogic.shuffleStates(states);
-                            GameLogic.updateStateByLevel(states, mLevel);
+                            GameLogic.updateStateByLevel(states, mLevelInfo.curLevel);
                         }
                     }
                     invalidate();
@@ -358,13 +362,10 @@ public class GameView extends View {
     }
 
     public void restart(boolean isSuccess) {
-        Log.d(LOG_TAG, "restart, isSuccess = " + isSuccess + ", level = " + mLevel);
+        Log.d(LOG_TAG, "restart, isSuccess = " + isSuccess + ", level = " + mLevelInfo.curLevel);
         if (isSuccess) {
-            mLevel = (mLevel + 1) % (mLevelCount + 1);
-            if (mLevel == 0) {
-                mLevel = 1;
-            }
-            Log.d(LOG_TAG, "goto level " + mLevel);
+            mLevelInfo.moveToNextLevel();
+            Log.d(LOG_TAG, "goto level " + mLevelInfo.curLevel);
         }
         states = null;
         initState();
@@ -390,8 +391,55 @@ public class GameView extends View {
         mTimer = null;
     }
 
-    public void setLevel(int level) {
-        mLevel = level;
-        restart(false);
+    class SizeInfo {
+        boolean useDefaultSize;
+        int rows;
+        int cols;
+        SizeInfo(boolean useDefaultSize, int rows, int cols) {
+            this.useDefaultSize = useDefaultSize;
+            this.rows = rows;
+            this.cols = cols;
+        }
+    }
+
+    public SizeInfo getSize() {
+        return mSizeInfo;
+    }
+
+    public boolean setSize(boolean useDefaultSize, int rows, int cols) {
+        mSizeInfo.useDefaultSize = useDefaultSize;
+        mSizeInfo.rows = rows;
+        mSizeInfo.cols = cols;
+        initState();
+        invalidate();
+        return true;
+    }
+
+    class LevelInfo {
+        int curLevel;
+        int maxLevel;
+
+        LevelInfo(int curLevel, int maxLevel) {
+            this.curLevel = curLevel;
+            this.maxLevel = maxLevel;
+        }
+
+        void moveToNextLevel() {
+            curLevel = (curLevel + 1) % maxLevel;
+            if (curLevel == 0) {
+                curLevel = 1;
+            }
+        }
+    }
+
+    public LevelInfo getLevelInfo() {
+        return mLevelInfo;
+    }
+
+    public void setCurLevel(int level) {
+        if (mLevelInfo.curLevel != level) {
+            mLevelInfo.curLevel = level;
+            restart(false);
+        }
     }
 }
