@@ -5,6 +5,8 @@
         android:orderInCategory="100" app:showAsAction="never" />
     <item android:id="@+id/action_hint" android:title="Hint"
         android:orderInCategory="100" app:showAsAction="never" />
+    <item android:id="@+id/action_pause_resume" android:title="Pause"
+        android:orderInCategory="100" app:showAsAction="never" />
     <item android:id="@+id/action_restart" android:title="Restart"
         android:orderInCategory="100" app:showAsAction="never" />
     <item android:id="@+id/action_select_size" android:title="Select Size"

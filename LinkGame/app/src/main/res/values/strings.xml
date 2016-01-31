@@ -12,4 +12,6 @@
         <item>Level 8 Go Inner</item>
         <item>Level 9 Go Outer</item>
     </string-array>
+    <string name="menu_pause">Pause</string>
+    <string name="menu_resume">Resume</string>
 </resources>

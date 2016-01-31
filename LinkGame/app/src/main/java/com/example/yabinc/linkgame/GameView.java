@@ -27,24 +27,13 @@ import java.util.jar.Attributes;
 /**
  * Created by yabinc on 1/21/16.
  */
-public class GameView extends View {
+public class GameView extends View implements GameState.OnStateChangeListener {
 
     private static final int ANIMAL_BITMAP_WIDTH = 100;
     private static final int ANIMAL_BITMAP_HEIGHT = 100;
     private static final String LOG_TAG = "GameView";
-    private static final int INIT_TIME_IN_SEC = 5 * 60;
-    private static final int ERASE_INC_TIME_IN_SEC = 5;
 
-    private LevelInfo mLevelInfo;
-    private Timer mTimer;
-    private int leftTimeInSec;
-    private Rect timeRect;
-    private Rect viewRect;
-    private int viewWidth;
-    private int viewHeight;
-    private Bitmap mWinBitmap;
-    private Bitmap mLoseBitmap;
-    private ArrayList<Bitmap> mAnimalBitmaps;
+    private PictureInfo mPictureInfo;
     private Paint mLinePaint;
     private Paint mSelectedImgPaint;
     private Paint mHintPaint;
@@ -53,31 +42,66 @@ public class GameView extends View {
 
     private GestureDetector mDetector;
 
-    private Handler myHandler;
-
     private SizeInfo mSizeInfo;
-    private GameLogic.State[][] states;
+    private ViewInfo mViewInfo;
+    private LevelInfo mLevelInfo;
+    private GameState mGameState;
 
-    int selectedRow = -1;
-    int selectedCol = -1;
+    static class PictureArg {
+        Bitmap animalBitmap;
+        Bitmap winBitmap;
+        Bitmap loseBitmap;
+        Bitmap pauseBitmap;
+    }
 
-    private GameLogic.LinkPath linkPath;
-    private GameLogic.LinkPath hintPath;
+    class PictureInfo {
+        Bitmap winBitmap;
+        Bitmap loseBitmap;
+        Bitmap pauseBitmap;
+        ArrayList<Bitmap> animalBitmaps;
+    }
+
+    class ViewInfo {
+        Rect globalRect;
+        Rect timeRect;
+        Rect blockRect;
+        int blockWidth;
+        int blockHeight;
+    }
+
+    static class LevelInfo {
+        int curLevel;
+        int maxLevel;
+
+        LevelInfo(int curLevel, int maxLevel) {
+            this.curLevel = curLevel;
+            this.maxLevel = maxLevel;
+        }
+
+        void moveToNextLevel() {
+            curLevel = (curLevel + 1) % maxLevel;
+            if (curLevel == 0) {
+                curLevel = 1;
+            }
+        }
+    }
 
 
     public GameView(Context context, AttributeSet attributeSet) {
         super(context, attributeSet);
     }
 
-    public void init(Bitmap animalBitmap, Bitmap winBitmap, Bitmap loseBitmap, int levelCount) {
+    public void init(PictureArg pictureArg, int levelCount) {
         mLevelInfo = new LevelInfo(1, levelCount);
-        mWinBitmap = winBitmap;
-        mLoseBitmap = loseBitmap;
-        mAnimalBitmaps = new ArrayList<Bitmap>();
-        for (int y = 0; y + ANIMAL_BITMAP_HEIGHT <= animalBitmap.getHeight(); y += ANIMAL_BITMAP_HEIGHT) {
-            for (int x = 0; x + ANIMAL_BITMAP_WIDTH <= animalBitmap.getWidth(); x += ANIMAL_BITMAP_WIDTH) {
-                if (!isBlank(animalBitmap, x, y, ANIMAL_BITMAP_WIDTH, ANIMAL_BITMAP_HEIGHT)) {
-                    mAnimalBitmaps.add(Bitmap.createBitmap(animalBitmap, x, y,
+        mPictureInfo = new PictureInfo();
+        mPictureInfo.winBitmap = pictureArg.winBitmap;
+        mPictureInfo.loseBitmap = pictureArg.loseBitmap;
+        mPictureInfo.pauseBitmap = pictureArg.pauseBitmap;
+        mPictureInfo.animalBitmaps = new ArrayList<Bitmap>();
+        for (int y = 0; y + ANIMAL_BITMAP_HEIGHT <= pictureArg.animalBitmap.getHeight(); y += ANIMAL_BITMAP_HEIGHT) {
+            for (int x = 0; x + ANIMAL_BITMAP_WIDTH <= pictureArg.animalBitmap.getWidth(); x += ANIMAL_BITMAP_WIDTH) {
+                if (!isBlank(pictureArg.animalBitmap, x, y, ANIMAL_BITMAP_WIDTH, ANIMAL_BITMAP_HEIGHT)) {
+                    mPictureInfo.animalBitmaps.add(Bitmap.createBitmap(pictureArg.animalBitmap, x, y,
                             ANIMAL_BITMAP_WIDTH, ANIMAL_BITMAP_HEIGHT));
                 }
             }
@@ -98,9 +122,10 @@ public class GameView extends View {
         mGreenPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mGreenPaint.setColor(Color.GREEN);
         mGreenPaint.setStyle(Paint.Style.FILL);
-        myHandler = new MyHandler();
         mDetector = new GestureDetector(getContext(), new MyGestureListener());
         mSizeInfo = new SizeInfo(true, -1, -1);
+        mViewInfo = new ViewInfo();
+        mGameState = new GameState(this);
     }
 
     private boolean isBlank(Bitmap bitmap, int x, int y, int width, int height) {
@@ -116,34 +141,48 @@ public class GameView extends View {
     }
 
     private void initState() {
+        Block[][] blocks = null;
         if (mSizeInfo.useDefaultSize) {
-            states = GameLogic.initState(viewRect.width(), viewRect.height(), mAnimalBitmaps.size(),
-                    getResources().getDisplayMetrics().densityDpi, states);
+            blocks = GameLogic.createBlocksByScreen(mViewInfo.blockRect.width(), mViewInfo.blockRect.height(),
+                    mPictureInfo.animalBitmaps.size(), getResources().getDisplayMetrics().densityDpi);
         } else {
-            states = GameLogic.initState(mSizeInfo.rows, mSizeInfo.cols, mAnimalBitmaps.size(), states);
+            blocks = GameLogic.createBlocks(mSizeInfo.rows, mSizeInfo.cols, mPictureInfo.animalBitmaps.size());
         }
-        selectedRow = -1;
-        selectedCol = -1;
-        linkPath = null;
-        hintPath = null;
-        leftTimeInSec = INIT_TIME_IN_SEC;
-        startTimer();
+        mGameState.start(blocks, mLevelInfo.curLevel);
         ((MainActivity)getContext()).setTitleByLevel(mLevelInfo.curLevel);
+    }
+
+    @Override
+    public void onStateChange(GameState state) {
+        invalidate();
+    }
+
+    @Override
+    public void onWin(GameState state) {
+        invalidate();
+    }
+
+    @Override
+    public void onLose(GameState state) {
+        invalidate();
     }
 
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
-        timeRect = new Rect(0, 0, w, h / 10);
-        viewRect = new Rect(0, timeRect.bottom, w, h);
-        initState();
+        mViewInfo.globalRect = new Rect(0, 0, w, h);
+        mViewInfo.timeRect = new Rect(0, 0, w, h / 10);
+        mViewInfo.blockRect = new Rect(0, mViewInfo.timeRect.bottom, w, h);
+        if (mGameState.isBeforeStart()) {
+            initState();
+        }
     }
 
     private void showImage(Canvas canvas, Bitmap bitmap) {
-        float factor = Math.min((float)viewRect.width() / bitmap.getWidth(),
-                (float)viewRect.height() / bitmap.getHeight());
-        int left = (viewRect.width() - (int)(bitmap.getWidth() * factor)) / 2;
-        int top = (viewRect.height() - (int)(bitmap.getHeight() * factor)) / 2;
+        float factor = Math.min((float)mViewInfo.globalRect.width() / bitmap.getWidth(),
+                (float)mViewInfo.globalRect.height() / bitmap.getHeight());
+        int left = (mViewInfo.globalRect.width() - (int)(bitmap.getWidth() * factor)) / 2;
+        int top = (mViewInfo.globalRect.height() - (int)(bitmap.getHeight() * factor)) / 2;
         canvas.drawBitmap(bitmap, new Rect(0, 0, bitmap.getWidth(), bitmap.getHeight()),
                 new Rect(left, top, left + (int) (bitmap.getWidth() * factor),
                         top + (int) (bitmap.getHeight() * factor)), null);
@@ -154,76 +193,80 @@ public class GameView extends View {
         super.onDraw(canvas);
         canvas.drawColor(Color.BLUE);
 
-        if (GameLogic.isSuccess(states)) {
-            showImage(canvas, mWinBitmap);
-            stopTimer();
-            return;
+        if (mGameState.isRun()) {
+            showBlocks(canvas);
+        } else if (mGameState.isSuccess()) {
+            showImage(canvas, mPictureInfo.winBitmap);
+        } else if (mGameState.isLose()) {
+            showImage(canvas, mPictureInfo.loseBitmap);
+        } else if (mGameState.isPause()) {
+            showImage(canvas, mPictureInfo.pauseBitmap);
         }
-        if (leftTimeInSec == 0) {
-            showImage(canvas, mLoseBitmap);
-            stopTimer();
-            return;
-        }
+    }
 
-        int timeWidth = timeRect.width() * 2 / 3;
-        int timeHeight = Math.min(timeRect.height() * 2 / 3, 50);
+    private void showBlocks(Canvas canvas) {
+        int timeWidth = mViewInfo.timeRect.width() * 2 / 3;
+        int timeHeight = Math.min(mViewInfo.timeRect.height() * 2 / 3, 50);
         Rect timeR = new Rect();
-        timeR.left = timeRect.left + (timeRect.width() - timeWidth) / 2;
+        timeR.left = mViewInfo.timeRect.left + (mViewInfo.timeRect.width() - timeWidth) / 2;
         timeR.right = timeR.left + timeWidth;
-        timeR.top = timeRect.top + (timeRect.height() - timeHeight) / 2;
+        timeR.top = mViewInfo.timeRect.top + (mViewInfo.timeRect.height() - timeHeight) / 2;
         timeR.bottom = timeR.top + timeHeight;
         canvas.drawRect(timeR, mBlackPaint);
-        timeR.right = timeR.left + timeR.width() * leftTimeInSec / INIT_TIME_IN_SEC;
+        timeR.right = timeR.left + (int)(timeR.width() * mGameState.getLeftTimePercent());
         canvas.drawRect(timeR, mGreenPaint);
 
-        int rows = states.length;
-        int cols = states[0].length;
-        viewWidth = Math.min(viewRect.width() / cols, viewRect.height() / rows);
-        viewHeight = viewWidth;
-        Log.d(LOG_TAG, "r " + rows + ", c " + cols + ", w " + viewRect.width() + ", h " + viewRect.height() + "vw " + viewWidth);
+        int rows = mGameState.blocks.length;
+        int cols = mGameState.blocks[0].length;
+        int blockSize = Math.min(mViewInfo.blockRect.width() / cols, mViewInfo.blockRect.height() / rows);
+        mViewInfo.blockHeight = mViewInfo.blockWidth = blockSize;
+        Log.d(LOG_TAG, "r " + rows + ", c " + cols + ", w " + mViewInfo.blockRect.width() + ", h "
+                + mViewInfo.blockRect.height() + "block " + blockSize);
 
         Rect src = new Rect(0, 0, ANIMAL_BITMAP_WIDTH, ANIMAL_BITMAP_HEIGHT);
         Rect dst = new Rect();
         for (int r = 0; r < rows; ++r) {
             for (int c = 0; c < cols; ++c) {
-                if (states[r][c].state == GameLogic.State.IMAGE_UNSELECTED) {
-                    dst.set(0, 0, viewWidth, viewHeight);
-                    dst.offset(viewRect.left + c * viewWidth, viewRect.top + r * viewHeight);
-                    canvas.drawBitmap(mAnimalBitmaps.get(states[r][c].imgIndex),
+                if (mGameState.blocks[r][c].isUnselected()) {
+                    dst.set(0, 0, mViewInfo.blockWidth, mViewInfo.blockHeight);
+                    dst.offset(mViewInfo.blockRect.left + c * mViewInfo.blockWidth,
+                                mViewInfo.blockRect.top + r * mViewInfo.blockHeight);
+                    canvas.drawBitmap(mPictureInfo.animalBitmaps.get(mGameState.blocks[r][c].imgIndex),
                             src, dst, null);
-                } else if (states[r][c].state == GameLogic.State.IMAGE_SELECTED){
-                    dst.set(0, 0, viewWidth, viewHeight);
-                    dst.offset(viewRect.left + c * viewWidth, viewRect.top + r * viewHeight);
-                    canvas.drawBitmap(mAnimalBitmaps.get(states[r][c].imgIndex),
+                } else if (mGameState.blocks[r][c].isSelected()) {
+                    dst.set(0, 0, mViewInfo.blockWidth, mViewInfo.blockHeight);
+                    dst.offset(mViewInfo.blockRect.left + c * mViewInfo.blockWidth,
+                            mViewInfo.blockRect.top + r * mViewInfo.blockHeight);
+                    canvas.drawBitmap(mPictureInfo.animalBitmaps.get(mGameState.blocks[r][c].imgIndex),
                             src, dst, mSelectedImgPaint);
                 }
             }
         }
 
-        if (linkPath != null) {
-            int lineCount = linkPath.pointsR.size() - 1;
+        if (mGameState.linkPath != null) {
+            int lineCount = mGameState.linkPath.pointsR.size() - 1;
             float[] points = new float[lineCount * 4];
-            for (int i = 0, j = 0; i < linkPath.pointsR.size(); ++i, j += 2) {
-                int r = linkPath.pointsR.get(i);
-                int c = linkPath.pointsC.get(i);
+            for (int i = 0, j = 0; i < mGameState.linkPath.pointsR.size(); ++i, j += 2) {
+                int r = mGameState.linkPath.pointsR.get(i);
+                int c = mGameState.linkPath.pointsC.get(i);
                 if (c >= 0 && c < cols) {
-                    points[j] = c * viewWidth + viewWidth / 2;
+                    points[j] = c * mViewInfo.blockWidth + mViewInfo.blockWidth / 2;
                 } else if (c == -1) {
                     points[j] = 0;
                 } else if (c == cols) {
-                    points[j] = cols * viewWidth;
+                    points[j] = cols * mViewInfo.blockWidth;
                 }
-                points[j] += viewRect.left;
+                points[j] += mViewInfo.blockRect.left;
 
                 if (r >= 0 && r < rows) {
-                    points[j + 1] = r * viewHeight + viewHeight / 2;
+                    points[j + 1] = r * mViewInfo.blockHeight + mViewInfo.blockHeight / 2;
                 } else if (r == -1) {
                     points[j + 1] = 0;
                 } else if (r == rows) {
-                    points[j + 1] = rows * viewHeight;
+                    points[j + 1] = rows * mViewInfo.blockHeight;
                 }
-                points[j + 1] += viewRect.top;
-                if (i > 0 && i < linkPath.pointsR.size() - 1) {
+                points[j + 1] += mViewInfo.blockRect.top;
+                if (i > 0 && i < mGameState.linkPath.pointsR.size() - 1) {
                     j += 2;
                     points[j] = points[j - 2];
                     points[j + 1] = points[j - 1];
@@ -231,13 +274,17 @@ public class GameView extends View {
             }
             canvas.drawLines(points, mLinePaint);
         }
-        if (hintPath != null) {
-            Log.d(LOG_TAG, "draw hintPath");
-            for (int i = 0; i < hintPath.pointsR.size(); i += hintPath.pointsR.size() - 1) {
-                int r = hintPath.pointsR.get(i);
-                int c = hintPath.pointsC.get(i);
-                dst.set(0, 0, viewWidth, viewHeight);
-                dst.offset(viewRect.left + c * viewWidth, viewRect.top + r * viewHeight);
+        if (mGameState.hintPath != null) {
+            Log.d(LOG_TAG, "draw hintPath r1 " + mGameState.hintPath.pointsR.get(0)
+                    + ", c1 " + mGameState.hintPath.pointsC.get(0)
+                    + ", r2 " + mGameState.hintPath.pointsR.get(mGameState.hintPath.pointsR.size() - 1)
+                    + ", c2 " + mGameState.hintPath.pointsC.get(mGameState.hintPath.pointsC.size() - 1));
+            for (int i = 0; i < mGameState.hintPath.pointsR.size(); i += mGameState.hintPath.pointsR.size() - 1) {
+                int r = mGameState.hintPath.pointsR.get(i);
+                int c = mGameState.hintPath.pointsC.get(i);
+                dst.set(0, 0, mViewInfo.blockWidth, mViewInfo.blockHeight);
+                dst.offset(mViewInfo.blockRect.left + c * mViewInfo.blockWidth,
+                        mViewInfo.blockRect.top + r * mViewInfo.blockHeight);
                 canvas.drawRect(dst, mHintPaint);
             }
         }
@@ -276,119 +323,56 @@ public class GameView extends View {
     }
 
     private void tapPos(float x, float y) {
-        if (GameLogic.isSuccess(states) || leftTimeInSec == 0) {
-            Log.d(LOG_TAG, "tapPos, isSuccess = " + GameLogic.isSuccess(states));
-            restart(GameLogic.isSuccess(states));
-            return;
-        }
-        if (linkPath != null || !viewRect.contains((int)x, (int)y)) {
-            return;
-        }
-        x -= viewRect.left;
-        y -= viewRect.top;
-        int c = (int)(x / viewWidth);
-        int r = (int)(y / viewHeight);
-        if (r < 0 || r >= states.length || c < 0 || c >= states[0].length) {
-            return;
-        }
-        Log.d(LOG_TAG, "tapPos, x " + x + ", y " + y + ", w " + viewWidth + ", h " + viewHeight + ", c " + c + ", r " + r);
-        if (states[r][c].state == GameLogic.State.IMAGE_UNSELECTED) {
-            states[r][c].state = GameLogic.State.IMAGE_SELECTED;
-            if (selectedRow == -1) {
-                selectedRow = r;
-                selectedCol = c;
-            } else {
-                GameLogic.LinkPath path = new GameLogic.LinkPath();
-                if (GameLogic.canErase(r, c, selectedRow, selectedCol, states, path)) {
-                    linkPath = path;
-                    selectedRow = -1;
-                    selectedCol = -1;
-                    hintPath = null;
-                    leftTimeInSec = Math.min(leftTimeInSec + ERASE_INC_TIME_IN_SEC, INIT_TIME_IN_SEC);
-                    myHandler.sendEmptyMessageDelayed(MyHandler.MSG_ERASE_LINK_PATH, 200);
-                } else {
-                    states[selectedRow][selectedCol].state = GameLogic.State.IMAGE_UNSELECTED;
-                    selectedRow = r;
-                    selectedCol = c;
-                }
+        if (mGameState.isSuccess()) {
+            mLevelInfo.moveToNextLevel();
+            restart();
+        } else if (mGameState.isLose()) {
+            restart();
+        } else if (mGameState.isPause()) {
+            resume();
+        } else if (mGameState.isRun()) {
+            if (mGameState.linkPath != null || !mViewInfo.blockRect.contains((int) x, (int) y)) {
+                return;
             }
-        } else if (states[r][c].state == GameLogic.State.IMAGE_SELECTED) {
-            states[r][c].state = GameLogic.State.IMAGE_UNSELECTED;
-            selectedRow = -1;
-            selectedCol = -1;
-        }
-        invalidate();
-    }
-
-    private class MyHandler extends Handler {
-        static final int MSG_ERASE_LINK_PATH = 0;
-        static final int MSG_UPDATE_TIME = 1;
-
-        @Override
-        public void handleMessage(Message msg) {
-            if (msg.what == MSG_ERASE_LINK_PATH) {
-                if (linkPath != null) {
-                    int len = linkPath.pointsR.size();
-                    states[linkPath.pointsR.get(0)][linkPath.pointsC.get(0)].state = GameLogic.State.EMPTY;
-                    states[linkPath.pointsR.get(len-1)][linkPath.pointsC.get(len-1)].state = GameLogic.State.EMPTY;
-                    linkPath = null;
-                    if (!GameLogic.isSuccess(states)) {
-                        GameLogic.updateStateByLevel(states, mLevelInfo.curLevel);
-                        GameLogic.LinkPath path = new GameLogic.LinkPath();
-                        while (!GameLogic.haveErasablePair(states, path)) {
-                            GameLogic.shuffleStates(states);
-                            GameLogic.updateStateByLevel(states, mLevelInfo.curLevel);
-                        }
-                    }
-                    invalidate();
-                }
-            } else if (msg.what == MSG_UPDATE_TIME) {
-                if (leftTimeInSec != 0) {
-                    leftTimeInSec--;
-                    invalidate();
-                }
+            x -= mViewInfo.blockRect.left;
+            y -= mViewInfo.blockRect.top;
+            int c = (int) (x / mViewInfo.blockWidth);
+            int r = (int) (y / mViewInfo.blockHeight);
+            if (r < 0 || r >= mGameState.blocks.length || c < 0 || c >= mGameState.blocks[0].length) {
+                return;
             }
+            Log.d(LOG_TAG, "tapPos, x " + x + ", y " + y + ", w " + mViewInfo.blockWidth + ", h "
+                    + mViewInfo.blockHeight + ", c " + c + ", r " + r);
+            mGameState.selectBlock(r, c);
         }
     }
 
     public void hint() {
-        GameLogic.LinkPath path = new GameLogic.LinkPath();
-        Log.d(LOG_TAG, "hint");
-        if (hintPath == null && GameLogic.haveErasablePair(states, path)) {
-            Log.d(LOG_TAG, "haveErasablePair");
-            hintPath = path;
-            invalidate();
-        }
+        mGameState.giveHint();
     }
 
-    public void restart(boolean isSuccess) {
-        Log.d(LOG_TAG, "restart, isSuccess = " + isSuccess + ", level = " + mLevelInfo.curLevel);
-        if (isSuccess) {
-            mLevelInfo.moveToNextLevel();
-            Log.d(LOG_TAG, "goto level " + mLevelInfo.curLevel);
-        }
-        states = null;
+    public void restart() {
         initState();
-        invalidate();
+    }
+
+    public void pause() {
+        mGameState.pause();
+    }
+
+    public boolean isPaused() {
+        return mGameState.isPause();
+    }
+
+    public void resume() {
+        mGameState.resumeFromPause();
     }
 
     public void startTimer() {
-        if (mTimer == null) {
-            mTimer = new Timer();
-            mTimer.schedule(new TimerTask() {
-                @Override
-                public void run() {
-                    myHandler.sendEmptyMessage(MyHandler.MSG_UPDATE_TIME);
-                }
-            }, 1000, 1000);
-        }
+        mGameState.startTimer();
     }
 
     public void stopTimer() {
-        if (mTimer != null) {
-            mTimer.cancel();
-        }
-        mTimer = null;
+        mGameState.stopTimer();
     }
 
     class SizeInfo {
@@ -415,23 +399,6 @@ public class GameView extends View {
         return true;
     }
 
-    class LevelInfo {
-        int curLevel;
-        int maxLevel;
-
-        LevelInfo(int curLevel, int maxLevel) {
-            this.curLevel = curLevel;
-            this.maxLevel = maxLevel;
-        }
-
-        void moveToNextLevel() {
-            curLevel = (curLevel + 1) % maxLevel;
-            if (curLevel == 0) {
-                curLevel = 1;
-            }
-        }
-    }
-
     public LevelInfo getLevelInfo() {
         return mLevelInfo;
     }
@@ -439,7 +406,7 @@ public class GameView extends View {
     public void setCurLevel(int level) {
         if (mLevelInfo.curLevel != level) {
             mLevelInfo.curLevel = level;
-            restart(false);
+            restart();
         }
     }
 }

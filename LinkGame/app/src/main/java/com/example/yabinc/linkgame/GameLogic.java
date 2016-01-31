@@ -18,25 +18,6 @@ public class GameLogic {
     public static final int DEFAULT_ROWS = 14;
     public static final int DEFAULT_COLS = 9;
 
-    static class State {
-        final static int IMAGE_UNSELECTED = 0;
-        final static int IMAGE_SELECTED = 1;
-        final static int EMPTY = 2;
-        int state;
-        int imgIndex;
-
-        State(int state, int imgIndex) {
-            this.state = state;
-            this.imgIndex = imgIndex;
-        }
-
-        final static private State emptyState = new State(EMPTY, -1);
-
-        static State getEmptyState() {
-            return emptyState;
-        }
-    }
-
     private static final int DIR_NONE = -1;
     private static final int DIR_UP = 0;
     private static final int DIR_LEFT = 1;
@@ -55,10 +36,31 @@ public class GameLogic {
         }
     }
 
+    public static Block[][] createBlocks(int rows, int cols, int imgCount) {
+        // Construct new states.
+        Random random = new Random();
+        int[] indexArray = new int[rows * cols];
+        for (int i = 0; i < indexArray.length; i += 2) {
+            indexArray[i] = indexArray[i + 1] = random.nextInt(imgCount);
+        }
+        for (int i = 0; i < indexArray.length; ++i) {
+            int j = random.nextInt(indexArray.length);
+            int temp = indexArray[i];
+            indexArray[i] = indexArray[j];
+            indexArray[j] = temp;
+        }
 
-    public static State[][] initState(int graphWidth, int graphHeight, int imgCount,
-                                      int dotsPerInch, State[][] oldStates) {
+        Block[][] blocks = new Block[rows][cols];
+        for (int i = 0; i < rows; ++i) {
+            for (int j = 0; j < cols; ++j) {
+                blocks[i][j] = new Block(Block.STATE_IMAGE_UNSELECTED, indexArray[i * cols + j]);
+            }
+        }
+        return blocks;
+    }
 
+    public static Block[][] createBlocksByScreen(int graphWidth, int graphHeight, int imgCount,
+                                                        int dotsPerInch) {
         int minDot = (int)(dotsPerInch * ANIMAL_MIN_INCH);
         int dot = minDot;
         int cols = -1;
@@ -74,86 +76,11 @@ public class GameLogic {
             }
             dot++;
         }
-        Log.d(LOG_TAG, "dotsPerInch = " + dotsPerInch + ", minDot = " + minDot + ", dot = " + dot);
-        Log.d(LOG_TAG, "w = " + graphWidth + ", h = " + graphHeight + ", r " + rows + ", c " + cols);
-
-        if (oldStates != null) {
-            if (oldStates.length == rows && oldStates[0].length == cols) {
-                return oldStates;
-            }
-            if (oldStates.length == cols && oldStates[0].length == rows) {
-                // Swap row and col
-                State[][] newStates = new State[rows][cols];
-                for (int i = 0; i < rows; ++i) {
-                    for (int j = 0; j < cols; ++j) {
-                        newStates[i][j] = oldStates[j][i];
-                    }
-                }
-                return newStates;
-            }
-        }
-        // Construct new states.
-        Random random = new Random();
-        int[] indexArray = new int[rows * cols];
-        for (int i = 0; i < indexArray.length; i += 2) {
-            indexArray[i] = indexArray[i + 1] = random.nextInt(imgCount);
-        }
-        for (int i = 0; i < indexArray.length; ++i) {
-            int j = random.nextInt(indexArray.length);
-            int temp = indexArray[i];
-            indexArray[i] = indexArray[j];
-            indexArray[j] = temp;
-        }
-
-        State[][] states = new State[rows][cols];
-        for (int i = 0; i < rows; ++i) {
-            for (int j = 0; j < cols; ++j) {
-                states[i][j] = new State(State.IMAGE_UNSELECTED, indexArray[i * cols + j]);
-            }
-        }
-        return states;
-    }
-
-    public static State[][] initState(int rows, int cols, int imgCount, State[][] oldStates) {
-        if (oldStates != null) {
-            if (oldStates.length == rows && oldStates[0].length == cols) {
-                return oldStates;
-            }
-            if (oldStates.length == cols && oldStates[0].length == rows) {
-                // Swap row and col
-                State[][] newStates = new State[rows][cols];
-                for (int i = 0; i < rows; ++i) {
-                    for (int j = 0; j < cols; ++j) {
-                        newStates[i][j] = oldStates[j][i];
-                    }
-                }
-                return newStates;
-            }
-        }
-        // Construct new states.
-        Random random = new Random();
-        int[] indexArray = new int[rows * cols];
-        for (int i = 0; i < indexArray.length; i += 2) {
-            indexArray[i] = indexArray[i + 1] = random.nextInt(imgCount);
-        }
-        for (int i = 0; i < indexArray.length; ++i) {
-            int j = random.nextInt(indexArray.length);
-            int temp = indexArray[i];
-            indexArray[i] = indexArray[j];
-            indexArray[j] = temp;
-        }
-
-        State[][] states = new State[rows][cols];
-        for (int i = 0; i < rows; ++i) {
-            for (int j = 0; j < cols; ++j) {
-                states[i][j] = new State(State.IMAGE_UNSELECTED, indexArray[i * cols + j]);
-            }
-        }
-        return states;
+        return createBlocks(rows, cols, imgCount);
     }
 
     interface Condition {
-        public boolean fulfill(int r, int c, State state);
+        public boolean fulfill(int r, int c, Block block);
     }
 
     static class PlaceCondition implements Condition {
@@ -165,18 +92,18 @@ public class GameLogic {
             targetC = c;
         }
 
-        public boolean fulfill(int r, int c, State state) {
+        public boolean fulfill(int r, int c, Block block) {
             return r == targetR && c == targetC;
         }
     }
 
     // DFS
-    public static boolean canErase(int r1, int c1, int r2, int c2, State[][] states, LinkPath path) {
-        if (states[r1][c1].imgIndex != states[r2][c2].imgIndex) {
+    public static boolean canErase(int r1, int c1, int r2, int c2, Block[][] blocks, LinkPath path) {
+        if (!blocks[r1][c1].isSameImage(blocks[r2][c2])) {
             return false;
         }
         for (int dir = 0; dir < 4; ++dir) {
-            if (searchPath(r1, c1, new PlaceCondition(r2, c2), dir, 1, states, path)) {
+            if (searchPath(r1, c1, new PlaceCondition(r2, c2), dir, 1, blocks, path)) {
                 return true;
             }
         }
@@ -184,12 +111,12 @@ public class GameLogic {
     }
 
     private static boolean searchPath(int srcR, int srcC, Condition condition, int direction,
-                                      int depth, State[][] states, LinkPath path) {
+                                      int depth, Block[][] blocks, LinkPath path) {
         if (depth > 3) {
             return false;
         }
-        int rows = states.length;
-        int cols = states[0].length;
+        int rows = blocks.length;
+        int cols = blocks[0].length;
         int nextDir1 = (direction + 3) % 4;
         int nextDir2 = (direction + 1) % 4;
         int r = srcR;
@@ -202,17 +129,17 @@ public class GameLogic {
                 break;
             }
             if (r >= 0 && r < rows && c >= 0 && c < cols) {
-                if (condition.fulfill(r, c, states[r][c])) {
+                if (condition.fulfill(r, c, blocks[r][c])) {
                     path.add(r, c);
                     found = true;
                     break;
                 }
-                if (states[r][c].state != State.EMPTY) {
+                if (!blocks[r][c].isEmpty()) {
                     break;
                 }
             }
-            if (searchPath(r, c, condition, nextDir1, depth + 1, states, path)
-                    || searchPath(r, c, condition, nextDir2, depth + 1, states, path)) {
+            if (searchPath(r, c, condition, nextDir1, depth + 1, blocks, path)
+                    || searchPath(r, c, condition, nextDir2, depth + 1, blocks, path)) {
                 found = true;
                 break;
             }
@@ -234,18 +161,18 @@ public class GameLogic {
             this.imgIndex = imgIndex;
         }
 
-        public boolean fulfill(int r, int c, State state) {
-            return (state.state != State.EMPTY && imgIndex == state.imgIndex) && !(r == srcR && c == srcC);
+        public boolean fulfill(int r, int c, Block block) {
+            return block.isSameImage(imgIndex) && !(r == srcR && c == srcC);
         }
     }
 
-    public static boolean haveErasablePair(State[][] states, LinkPath path) {
-        for (int i = 0; i < states.length; ++i) {
-            for (int j = 0; j < states[0].length; ++j) {
-                if (states[i][j].state != State.EMPTY) {
-                    Condition condition = new ImgIndexCondition(i, j, states[i][j].imgIndex);
+    public static boolean haveErasablePair(Block[][] blocks, LinkPath path) {
+        for (int i = 0; i < blocks.length; ++i) {
+            for (int j = 0; j < blocks[0].length; ++j) {
+                if (!blocks[i][j].isEmpty()) {
+                    Condition condition = new ImgIndexCondition(i, j, blocks[i][j].imgIndex);
                     for (int dir = 0; dir < 4; ++dir) {
-                        if (searchPath(i, j, condition, dir, 1, states, path)) {
+                        if (searchPath(i, j, condition, dir, 1, blocks, path)) {
                             return true;
                         }
                     }
@@ -255,23 +182,23 @@ public class GameLogic {
         return false;
     }
 
-    public static void shuffleStates(State[][] states) {
+    public static void shuffleBlocks(Block[][] blocks) {
         Random random = new Random();
-        for (int i = 0; i < states.length; ++i) {
-            for (int j = 0; j < states[0].length; ++j) {
-                int ti = random.nextInt(states.length);
-                int tj = random.nextInt(states[0].length);
-                State state = states[i][j];
-                states[i][j] = states[ti][tj];
-                states[ti][tj] = state;
+        for (int i = 0; i < blocks.length; ++i) {
+            for (int j = 0; j < blocks[0].length; ++j) {
+                int ti = random.nextInt(blocks.length);
+                int tj = random.nextInt(blocks[0].length);
+                Block tmp = blocks[i][j];
+                blocks[i][j] = blocks[ti][tj];
+                blocks[ti][tj] = tmp;
             }
         }
     }
 
-    public static boolean isSuccess(State[][] states) {
-        for (int i = 0; i < states.length; ++i) {
-            for (int j = 0; j < states[0].length; ++j) {
-                if (states[i][j].state != State.EMPTY) {
+    public static boolean isSuccess(Block[][] blocks) {
+        for (int i = 0; i < blocks.length; ++i) {
+            for (int j = 0; j < blocks[0].length; ++j) {
+                if (!blocks[i][j].isEmpty()) {
                     return false;
                 }
             }
@@ -279,23 +206,23 @@ public class GameLogic {
         return true;
     }
 
-    private static StateUpdateStrategy getStrategyByLevel(int level) {
+    private static BlockUpdateStrategy getStrategyByLevel(int level) {
         switch (level) {
-            case 1: return new StateUpdateStrategyKeep();
-            case 2: return new StateUpdateStrategyGoUp();
-            case 3: return new StateUpdateStrategyGoDown();
-            case 4: return new StateUpdateStrategyGoLeft();
-            case 5: return new StateUpdateStrategyGoRight();
-            case 6: return new StateUpdateStrategyUpDownSplit();
-            case 7: return new StateUpdateStrategyLeftRightSplit();
-            case 8: return new StateUpdateStrategyGoInner();
-            case 9: return new StateUpdateStrategyGoOuter();
+            case 1: return new BlockUpdateStrategyKeep();
+            case 2: return new BlockUpdateStrategyGoUp();
+            case 3: return new BlockUpdateStrategyGoDown();
+            case 4: return new BlockUpdateStrategyGoLeft();
+            case 5: return new BlockUpdateStrategyGoRight();
+            case 6: return new BlockUpdateStrategyUpDownSplit();
+            case 7: return new BlockUpdateStrategyLeftRightSplit();
+            case 8: return new BlockUpdateStrategyGoInner();
+            case 9: return new BlockUpdateStrategyGoOuter();
         }
-        return new StateUpdateStrategyKeep();
+        return new BlockUpdateStrategyKeep();
     }
 
-    public static void updateStateByLevel(State[][] states, int level) {
-        StateUpdateStrategy strategy = getStrategyByLevel(level);
-        strategy.updateStates(states);
+    public static void updateBlocksByLevel(Block[][] blocks, int level) {
+        BlockUpdateStrategy strategy = getStrategyByLevel(level);
+        strategy.updateBlocks(blocks);
     }
 }

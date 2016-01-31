@@ -34,12 +34,13 @@ public class MainActivity extends AppCompatActivity
         setSupportActionBar(toolbar);
 
         levelNames = getResources().getStringArray(R.array.level_names);
-        Bitmap animalBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.animals);
-        Bitmap winBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.win);
-        Bitmap loseBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.lose);
+        GameView.PictureArg pictureArg = new GameView.PictureArg();
+        pictureArg.animalBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.animals);
+        pictureArg.winBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.win);
+        pictureArg.loseBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.lose);
+        pictureArg.pauseBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.pause);
         mGameView = (GameView) findViewById(R.id.gameView);
-        mGameView.init(animalBitmap, winBitmap, loseBitmap, levelNames.length);
-
+        mGameView.init(pictureArg, levelNames.length);
     }
 
     public void setTitleByLevel(int level) {
@@ -60,28 +61,34 @@ public class MainActivity extends AppCompatActivity
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
+        switch (item.getItemId()) {
+            case R.id.action_settings:
+                break;
+            case R.id.action_hint:
+                mGameView.hint();
+                break;
+            case R.id.action_pause_resume:
+                if (mGameView.isPaused()) {
+                    mGameView.resume();
+                    item.setTitle(R.string.menu_pause);
+                } else {
+                    mGameView.pause();
+                    item.setTitle(R.string.menu_resume);
+                }
+                break;
+            case R.id.action_restart:
+                mGameView.restart();
+                break;
+            case R.id.action_select_size:
+                showSelectSizeDialog();
+                break;
+            case R.id.action_select_level:
+                showSelectLevelDialog();
+                break;
+            default:
+                return super.onOptionsItemSelected(item);
         }
-        if (id == R.id.action_hint) {
-            mGameView.hint();
-            return true;
-        }
-        if (id == R.id.action_restart) {
-            mGameView.restart(false);
-            return true;
-        }
-        if (id == R.id.action_select_size) {
-            showSelectSizeDialog();
-            return true;
-        }
-        if (id == R.id.action_select_level) {
-            showSelectLevelDialog();
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
+        return true;
     }
 
     @Override
