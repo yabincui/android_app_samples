@@ -55,6 +55,18 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        MenuItem item = menu.findItem(R.id.action_pause_resume);
+        if (mGameView.isPaused()) {
+            item.setTitle(R.string.menu_resume);
+        } else {
+            item.setTitle(R.string.menu_pause);
+        }
+
+        return super.onPrepareOptionsMenu(menu);
+    }
+
+    @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle action bar item clicks here. The action bar will
         // automatically handle clicks on the Home/Up button, so long
@@ -70,10 +82,8 @@ public class MainActivity extends AppCompatActivity
             case R.id.action_pause_resume:
                 if (mGameView.isPaused()) {
                     mGameView.resume();
-                    item.setTitle(R.string.menu_pause);
                 } else {
                     mGameView.pause();
-                    item.setTitle(R.string.menu_resume);
                 }
                 break;
             case R.id.action_restart:
