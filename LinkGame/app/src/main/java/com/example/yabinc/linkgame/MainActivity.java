@@ -20,9 +20,11 @@ import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity
         implements SelectSizeDialogFragment.SelectSizeDialogListener,
-        SelectLevelDialogFragment.SelectLevelDialogListener {
+        SelectLevelDialogFragment.SelectLevelDialogListener,
+        LevelChangeListener {
 
     private static final String LOG_TAG = "MainActivity";
+    private Setting mSetting;
     private GameView mGameView;
     private String[] levelNames;
 
@@ -33,14 +35,20 @@ public class MainActivity extends AppCompatActivity
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
+        mSetting = new Setting(this);
         levelNames = getResources().getStringArray(R.array.level_names);
+        LevelInfo levelInfo = mSetting.getLevelInfo();
+        if (levelInfo.maxLevel == -1) {
+            levelInfo = new LevelInfo(1, 1, levelNames.length);
+            mSetting.setLevelInfo(levelInfo);
+        }
         GameView.PictureArg pictureArg = new GameView.PictureArg();
         pictureArg.animalBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.animals);
         pictureArg.winBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.win);
         pictureArg.loseBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.lose);
         pictureArg.pauseBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.pause);
         mGameView = (GameView) findViewById(R.id.gameView);
-        mGameView.init(pictureArg, levelNames.length);
+        mGameView.init(pictureArg, mSetting.getSizeInfo(), levelInfo, this);
     }
 
     public void setTitleByLevel(int level) {
@@ -118,7 +126,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void showSelectSizeDialog() {
-        GameView.SizeInfo sizeInfo = mGameView.getSize();
+        SizeInfo sizeInfo = mSetting.getSizeInfo();
         FragmentTransaction ft = getFragmentManager().beginTransaction();
         DialogFragment f = SelectSizeDialogFragment.newInstance(sizeInfo.useDefaultSize, sizeInfo.rows, sizeInfo.cols);
         f.show(ft, "dialog");
@@ -133,18 +141,27 @@ public class MainActivity extends AppCompatActivity
                 return;
             }
         }
-        mGameView.setSize(useDefault, rows, cols);
+        SizeInfo info = new SizeInfo(useDefault, rows, cols);
+        mSetting.setSizeInfo(info);
+        mGameView.setSize(info);
     }
 
     private void showSelectLevelDialog() {
         FragmentTransaction ft = getFragmentManager().beginTransaction();
-        GameView.LevelInfo levelInfo = mGameView.getLevelInfo();
-        DialogFragment f = SelectLevelDialogFragment.newInstance(levelInfo.curLevel, levelInfo.maxLevel, levelNames);
+        LevelInfo levelInfo = mSetting.getLevelInfo();
+        DialogFragment f = SelectLevelDialogFragment.newInstance(levelInfo.curLevel, levelInfo.maxAchievedLevel, levelNames);
         f.show(ft, "dialog");
     }
 
     @Override
     public void onSelectLevel(int level) {
-        mGameView.setCurLevel(level);
+        LevelInfo levelInfo = mSetting.getLevelInfo();
+        levelInfo.curLevel = level;
+        mGameView.setLevelInfo(levelInfo);
+    }
+
+    @Override
+    public void onLevelChange(LevelInfo info) {
+        mSetting.setLevelInfo(info);
     }
 }

@@ -85,8 +85,18 @@ class GameState {
         linkPath = null;
         hintPath = null;
         leftTimeInSec = INIT_TIME_IN_SEC;
+        checkAndShuffleBlocks();
         startTimer();
         onStateChange();
+    }
+
+    private void checkAndShuffleBlocks() {
+        GameLogic.updateBlocksByLevel(blocks, curLevel);
+        GameLogic.LinkPath path = new GameLogic.LinkPath();
+        while (!GameLogic.haveErasablePair(blocks, path)) {
+            GameLogic.shuffleBlocks(blocks);
+            GameLogic.updateBlocksByLevel(blocks, curLevel);
+        }
     }
 
     boolean isBeforeStart() {
@@ -199,12 +209,7 @@ class GameState {
                     if (GameLogic.isSuccess(blocks)) {
                         setSuccess();
                     } else {
-                        GameLogic.updateBlocksByLevel(blocks, curLevel);
-                        GameLogic.LinkPath path = new GameLogic.LinkPath();
-                        while (!GameLogic.haveErasablePair(blocks, path)) {
-                            GameLogic.shuffleBlocks(blocks);
-                            GameLogic.updateBlocksByLevel(blocks, curLevel);
-                        }
+                        checkAndShuffleBlocks();
                     }
                     onStateChange();
                 }

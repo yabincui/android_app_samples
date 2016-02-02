@@ -24,6 +24,52 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.jar.Attributes;
 
+class SizeInfo {
+    boolean useDefaultSize;
+    int rows;
+    int cols;
+    SizeInfo(boolean useDefaultSize, int rows, int cols) {
+        this.useDefaultSize = useDefaultSize;
+        this.rows = rows;
+        this.cols = cols;
+    }
+    SizeInfo() {
+        useDefaultSize = true;
+        rows = -1;
+        cols = -1;
+    }
+}
+
+class LevelInfo {
+    int curLevel;
+    int maxAchievedLevel;
+    int maxLevel;
+
+    LevelInfo(int curLevel, int maxAchievedLevel, int maxLevel) {
+        this.curLevel = curLevel;
+        this.maxAchievedLevel = maxAchievedLevel;
+        this.maxLevel = maxLevel;
+    }
+
+    LevelInfo() {
+        curLevel = -1;
+        maxAchievedLevel = -1;
+        maxLevel = -1;
+    }
+
+    void moveToNextLevel() {
+        curLevel = (curLevel + 1) % (maxLevel + 1);
+        if (curLevel == 0) {
+            curLevel = 1;
+        }
+        maxAchievedLevel = Math.max(maxAchievedLevel, curLevel);
+    }
+}
+
+interface LevelChangeListener {
+    public void onLevelChange(LevelInfo info);
+}
+
 /**
  * Created by yabinc on 1/21/16.
  */
@@ -45,6 +91,7 @@ public class GameView extends View implements GameState.OnStateChangeListener {
     private SizeInfo mSizeInfo;
     private ViewInfo mViewInfo;
     private LevelInfo mLevelInfo;
+    private LevelChangeListener mLevelChangeListener;
     private GameState mGameState;
 
     static class PictureArg {
@@ -69,30 +116,15 @@ public class GameView extends View implements GameState.OnStateChangeListener {
         int blockHeight;
     }
 
-    static class LevelInfo {
-        int curLevel;
-        int maxLevel;
-
-        LevelInfo(int curLevel, int maxLevel) {
-            this.curLevel = curLevel;
-            this.maxLevel = maxLevel;
-        }
-
-        void moveToNextLevel() {
-            curLevel = (curLevel + 1) % (maxLevel + 1);
-            if (curLevel == 0) {
-                curLevel = 1;
-            }
-        }
-    }
-
 
     public GameView(Context context, AttributeSet attributeSet) {
         super(context, attributeSet);
     }
 
-    public void init(PictureArg pictureArg, int levelCount) {
-        mLevelInfo = new LevelInfo(1, levelCount);
+    public void init(PictureArg pictureArg, SizeInfo sizeInfo, LevelInfo levelInfo,
+                     LevelChangeListener levelChangeListener) {
+        mLevelInfo = levelInfo;
+        mLevelChangeListener = levelChangeListener;
         mPictureInfo = new PictureInfo();
         mPictureInfo.winBitmap = pictureArg.winBitmap;
         mPictureInfo.loseBitmap = pictureArg.loseBitmap;
@@ -123,7 +155,7 @@ public class GameView extends View implements GameState.OnStateChangeListener {
         mGreenPaint.setColor(Color.GREEN);
         mGreenPaint.setStyle(Paint.Style.FILL);
         mDetector = new GestureDetector(getContext(), new MyGestureListener());
-        mSizeInfo = new SizeInfo(true, -1, -1);
+        mSizeInfo = sizeInfo;
         mViewInfo = new ViewInfo();
         mGameState = new GameState(this);
     }
@@ -325,6 +357,7 @@ public class GameView extends View implements GameState.OnStateChangeListener {
     private void tapPos(float x, float y) {
         if (mGameState.isSuccess()) {
             mLevelInfo.moveToNextLevel();
+            mLevelChangeListener.onLevelChange(mLevelInfo);
             restart();
         } else if (mGameState.isLose()) {
             restart();
@@ -375,25 +408,12 @@ public class GameView extends View implements GameState.OnStateChangeListener {
         mGameState.stopTimer();
     }
 
-    class SizeInfo {
-        boolean useDefaultSize;
-        int rows;
-        int cols;
-        SizeInfo(boolean useDefaultSize, int rows, int cols) {
-            this.useDefaultSize = useDefaultSize;
-            this.rows = rows;
-            this.cols = cols;
-        }
-    }
-
     public SizeInfo getSize() {
         return mSizeInfo;
     }
 
-    public boolean setSize(boolean useDefaultSize, int rows, int cols) {
-        mSizeInfo.useDefaultSize = useDefaultSize;
-        mSizeInfo.rows = rows;
-        mSizeInfo.cols = cols;
+    public boolean setSize(SizeInfo info) {
+        mSizeInfo = info;
         initState();
         invalidate();
         return true;
@@ -403,9 +423,11 @@ public class GameView extends View implements GameState.OnStateChangeListener {
         return mLevelInfo;
     }
 
-    public void setCurLevel(int level) {
-        if (mLevelInfo.curLevel != level) {
-            mLevelInfo.curLevel = level;
+    public void setLevelInfo(LevelInfo levelInfo) {
+        int oldLevel = mLevelInfo.curLevel;
+        mLevelInfo = levelInfo;
+        mLevelChangeListener.onLevelChange(mLevelInfo);
+        if (oldLevel != levelInfo.curLevel) {
             restart();
         }
     }
