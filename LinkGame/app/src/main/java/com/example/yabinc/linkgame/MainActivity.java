@@ -21,12 +21,14 @@ import java.util.ArrayList;
 public class MainActivity extends AppCompatActivity
         implements SelectSizeDialogFragment.SelectSizeDialogListener,
         SelectLevelDialogFragment.SelectLevelDialogListener,
-        LevelChangeListener {
+        GameView.GameListener {
 
     private static final String LOG_TAG = "MainActivity";
+    private String[] levelNames;
     private Setting mSetting;
     private GameView mGameView;
-    private String[] levelNames;
+    private GameSound mGameSound;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,6 +51,7 @@ public class MainActivity extends AppCompatActivity
         pictureArg.pauseBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.pause);
         mGameView = (GameView) findViewById(R.id.gameView);
         mGameView.init(pictureArg, mSetting.getSizeInfo(), levelInfo, this);
+        mGameSound = new GameSound(this);
     }
 
     public void setTitleByLevel(int level) {
@@ -63,6 +66,28 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        if (mGameView != null) {
+            mGameView.startTimer();
+        }
+        if (mSetting.getSoundInfo().playBackgroundMusic) {
+            mGameSound.startBackgroundMusic();
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (mGameView != null) {
+            mGameView.stopTimer();
+        }
+        if (mSetting.getSoundInfo().playBackgroundMusic) {
+            mGameSound.stopBackgroundMusic();
+        }
+    }
+
+    @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
         MenuItem item = menu.findItem(R.id.action_pause_resume);
         if (mGameView.isPaused()) {
@@ -70,6 +95,13 @@ public class MainActivity extends AppCompatActivity
         } else {
             item.setTitle(R.string.menu_pause);
         }
+        SoundInfo soundInfo = mSetting.getSoundInfo();
+        item = menu.findItem(R.id.action_play_pause_click_sound);
+        item.setTitle(soundInfo.playClickSound ? R.string.menu_pause_click_sound :
+                R.string.menu_play_click_sound);
+        item = menu.findItem(R.id.action_play_pause_background_music);
+        item.setTitle(soundInfo.playBackgroundMusic ? R.string.menu_pause_background_music :
+                R.string.menu_play_background_music);
 
         return super.onPrepareOptionsMenu(menu);
     }
@@ -103,6 +135,23 @@ public class MainActivity extends AppCompatActivity
             case R.id.action_select_level:
                 showSelectLevelDialog();
                 break;
+            case R.id.action_play_pause_click_sound: {
+                SoundInfo soundInfo = mSetting.getSoundInfo();
+                soundInfo.playClickSound = !soundInfo.playClickSound;
+                mSetting.setSoundInfo(soundInfo);
+                break;
+            }
+            case R.id.action_play_pause_background_music: {
+                SoundInfo soundInfo = mSetting.getSoundInfo();
+                soundInfo.playBackgroundMusic = !soundInfo.playBackgroundMusic;
+                mSetting.setSoundInfo(soundInfo);
+                if (soundInfo.playBackgroundMusic) {
+                    mGameSound.startBackgroundMusic();
+                } else {
+                    mGameSound.stopBackgroundMusic();
+                }
+                break;
+            }
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -112,17 +161,11 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onStart() {
         super.onStart();
-        if (mGameView != null) {
-            mGameView.startTimer();
-        }
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        if (mGameView != null) {
-            mGameView.stopTimer();
-        }
     }
 
     private void showSelectSizeDialog() {
@@ -163,5 +206,16 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onLevelChange(LevelInfo info) {
         mSetting.setLevelInfo(info);
+    }
+
+    @Override
+    public void onBlockClick() {
+        if (mSetting.getSoundInfo().playClickSound) {
+            mGameSound.playClickSound();
+        }
+    }
+
+    public void playClickSound() {
+
     }
 }

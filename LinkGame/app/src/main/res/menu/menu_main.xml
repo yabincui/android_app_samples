@@ -5,12 +5,16 @@
         android:orderInCategory="100" app:showAsAction="never" />
     <item android:id="@+id/action_hint" android:title="Hint"
         android:orderInCategory="100" app:showAsAction="never" />
-    <item android:id="@+id/action_pause_resume" android:title="Pause"
+    <item android:id="@+id/action_pause_resume" android:title=""
         android:orderInCategory="100" app:showAsAction="never" />
     <item android:id="@+id/action_restart" android:title="Restart"
         android:orderInCategory="100" app:showAsAction="never" />
     <item android:id="@+id/action_select_size" android:title="Select Size"
         android:orderInCategory="100" app:showAsAction="never" />
     <item android:id="@+id/action_select_level" android:title="Select Level"
+        android:orderInCategory="100" app:showAsAction="never" />
+    <item android:id="@+id/action_play_pause_click_sound" app:title=""
+        android:orderInCategory="100" app:showAsAction="never" />
+    <item android:id="@+id/action_play_pause_background_music" app:title=""
         android:orderInCategory="100" app:showAsAction="never" />
 </menu>

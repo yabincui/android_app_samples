@@ -14,4 +14,8 @@
     </string-array>
     <string name="menu_pause">Pause</string>
     <string name="menu_resume">Resume</string>
+    <string name="menu_play_click_sound">Play Click Sound</string>
+    <string name="menu_pause_click_sound">Stop Click Sound</string>
+    <string name="menu_play_background_music">Play Background Music</string>
+    <string name="menu_pause_background_music">Stop Background Music</string>
 </resources>

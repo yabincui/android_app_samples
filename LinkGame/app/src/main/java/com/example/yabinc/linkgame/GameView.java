@@ -66,10 +66,6 @@ class LevelInfo {
     }
 }
 
-interface LevelChangeListener {
-    public void onLevelChange(LevelInfo info);
-}
-
 /**
  * Created by yabinc on 1/21/16.
  */
@@ -91,8 +87,13 @@ public class GameView extends View implements GameState.OnStateChangeListener {
     private SizeInfo mSizeInfo;
     private ViewInfo mViewInfo;
     private LevelInfo mLevelInfo;
-    private LevelChangeListener mLevelChangeListener;
+    private GameListener mGameListener;
     private GameState mGameState;
+
+    public interface GameListener {
+        public void onLevelChange(LevelInfo info);
+        public void onBlockClick();
+    }
 
     static class PictureArg {
         Bitmap animalBitmap;
@@ -122,9 +123,9 @@ public class GameView extends View implements GameState.OnStateChangeListener {
     }
 
     public void init(PictureArg pictureArg, SizeInfo sizeInfo, LevelInfo levelInfo,
-                     LevelChangeListener levelChangeListener) {
+                     GameListener gameListener) {
         mLevelInfo = levelInfo;
-        mLevelChangeListener = levelChangeListener;
+        mGameListener = gameListener;
         mPictureInfo = new PictureInfo();
         mPictureInfo.winBitmap = pictureArg.winBitmap;
         mPictureInfo.loseBitmap = pictureArg.loseBitmap;
@@ -197,6 +198,11 @@ public class GameView extends View implements GameState.OnStateChangeListener {
     @Override
     public void onLose(GameState state) {
         invalidate();
+    }
+
+    @Override
+    public void onBlockClick() {
+        mGameListener.onBlockClick();
     }
 
     @Override
@@ -357,7 +363,7 @@ public class GameView extends View implements GameState.OnStateChangeListener {
     private void tapPos(float x, float y) {
         if (mGameState.isSuccess()) {
             mLevelInfo.moveToNextLevel();
-            mLevelChangeListener.onLevelChange(mLevelInfo);
+            mGameListener.onLevelChange(mLevelInfo);
             restart();
         } else if (mGameState.isLose()) {
             restart();
@@ -426,7 +432,7 @@ public class GameView extends View implements GameState.OnStateChangeListener {
     public void setLevelInfo(LevelInfo levelInfo) {
         int oldLevel = mLevelInfo.curLevel;
         mLevelInfo = levelInfo;
-        mLevelChangeListener.onLevelChange(mLevelInfo);
+        mGameListener.onLevelChange(mLevelInfo);
         if (oldLevel != levelInfo.curLevel) {
             restart();
         }

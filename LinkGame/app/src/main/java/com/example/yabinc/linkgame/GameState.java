@@ -55,6 +55,7 @@ class GameState {
         public void onStateChange(GameState state);
         public void onWin(GameState state);
         public void onLose(GameState state);
+        public void onBlockClick();
     }
 
     int state = GAME_BEFORE_START;
@@ -136,12 +137,20 @@ class GameState {
                     selectedCol = col;
                 }
             }
+            onBlockClick();
             onStateChange();
         } else if (blocks[row][col].state == Block.STATE_IMAGE_SELECTED) {
             blocks[row][col].state = Block.STATE_IMAGE_UNSELECTED;
             selectedRow = -1;
             selectedCol = -1;
+            onBlockClick();
             onStateChange();
+        }
+    }
+
+    private void onBlockClick() {
+        if (mListener != null) {
+            mListener.onBlockClick();
         }
     }
 

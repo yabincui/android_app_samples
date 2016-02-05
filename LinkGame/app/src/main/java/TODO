@@ -1,5 +1,10 @@
 TODO List:
-1. Save size options and level options.
-2. Add Click Sound and Background Sound.
-3. Add function to split a graph file into linkable icons. Add library to test if icons are distinguishable.
-4. Add startup flash to show how to play.
+1. Save size options and level options. (done)
+2. Add Click Sound and Background Sound. (done)
+3. Use breadth-first search for path searching.
+4. Add function to split a graph file into linkable icons. Add library to test if icons are distinguishable.
+4.1 add a simple image similarity method.
+http://www.lac.inpe.br/JIPCookbook/6050-howto-compareimages.jsp#howtohowdoicomparetwoimagestoseeiftheyareequalaverysimplealgorithmtocompareimagesforipossibleisimilaritywithoutconsideringthehighlevelcontents
+
+
+5. Add startup flash to show how to play.
