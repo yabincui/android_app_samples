@@ -18,4 +18,5 @@
     <string name="menu_pause_click_sound">Stop Click Sound</string>
     <string name="menu_play_background_music">Play Background Music</string>
     <string name="menu_pause_background_music">Stop Background Music</string>
+    <string name="title_activity_score">ScoreActivity</string>
 </resources>

@@ -13,6 +13,7 @@ public class Setting {
     private Context mContext;
     private SharedPreferences mSharedPreferences;
     private SoundInfo mSoundInfo;
+    private ScoreInfo mScoreInfo;
 
     Setting(Context context) {
         mContext = context;
@@ -67,5 +68,35 @@ public class Setting {
         editor.putBoolean("SoundInfo_playBackgroundMusic", info.playBackgroundMusic);
         editor.commit();
         mSoundInfo = info;
+    }
+
+    public ScoreInfo getScoreInfo() {
+        if (mScoreInfo == null) {
+            ScoreInfo info = new ScoreInfo();
+            info.maxWinLevelInOneTime = mSharedPreferences.getLong("ScoreInfo_maxWinLevelInOneTime",
+                    info.maxWinLevelInOneTime);
+            info.totalWinLevel = mSharedPreferences.getLong("ScoreInfo_totalWinLevel",
+                    info.totalWinLevel);
+            info.curWinLevel = mSharedPreferences.getLong("ScoreInfo_curWinLevel",
+                    info.curWinLevel);
+            info.maxScoreInOneTime = mSharedPreferences.getLong("ScoreInfo_maxScoreInOneTime",
+                    info.maxScoreInOneTime);
+            info.totalScore = mSharedPreferences.getLong("ScoreInfo_totalScore", info.totalScore);
+            info.curScore = mSharedPreferences.getLong("ScoreInfo_curScore", info.curScore);
+            mScoreInfo = info;
+        }
+        return mScoreInfo;
+    }
+
+    public void setScoreInfo(ScoreInfo info) {
+        SharedPreferences.Editor editor = mSharedPreferences.edit();
+        editor.putLong("ScoreInfo_maxWinLevelInOneTime", info.maxWinLevelInOneTime);
+        editor.putLong("ScoreInfo_totalWinLevel", info.totalWinLevel);
+        editor.putLong("ScoreInfo_curWinLevel", info.curWinLevel);
+        editor.putLong("ScoreInfo_maxScoreInOneTime", info.maxScoreInOneTime);
+        editor.putLong("ScoreInfo_totalScore", info.totalScore);
+        editor.putLong("ScoreInfo_curScore", info.curScore);
+        editor.commit();
+        mScoreInfo = info;
     }
 }

@@ -4,6 +4,7 @@ import android.util.Log;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Queue;
 import java.util.Random;
 
@@ -25,16 +26,6 @@ public class GameLogic {
     private static final int DIR_RIGHT = 3;
     private static final int[] dr = new int[]{1, 0, -1, 0};
     private static final int[] dc = new int[]{0, -1, 0, 1};
-
-    static class LinkPath {
-        ArrayList<Integer> pointsR = new ArrayList<>();
-        ArrayList<Integer> pointsC = new ArrayList<>();
-
-        void add(int r, int c) {
-            pointsR.add(r);
-            pointsC.add(c);
-        }
-    }
 
     public static Block[][] createBlocks(int rows, int cols, int imgCount) {
         // Construct new states.
@@ -98,20 +89,36 @@ public class GameLogic {
     }
 
     // DFS
-    public static boolean canErase(int r1, int c1, int r2, int c2, Block[][] blocks, LinkPath path) {
+    public static boolean canErase(int r1, int c1, int r2, int c2, Block[][] blocks, ArrayList<Point> path) {
         if (!blocks[r1][c1].isSameImage(blocks[r2][c2])) {
             return false;
         }
+        Condition condition = new PlaceCondition(r2, c2);
+        return searchPath(r1, c1, condition, blocks, path);
+    }
+
+    private static boolean searchPath(int srcR, int srcC, Condition condition,
+                                      Block[][] blocks, ArrayList<Point> path) {
+        ArrayList<Point> path2 = new ArrayList<Point>();
+        boolean result = searchPathByDFS(srcR, srcC, condition, blocks, path2);
+        boolean resultDp = searchPathByDP(srcR, srcC, condition, blocks, path);
+        assert result == resultDp;
+        return result;
+    }
+
+    private static boolean searchPathByDFS(int r1, int c1, Condition condition,
+                                           Block[][] blocks, ArrayList<Point> path) {
         for (int dir = 0; dir < 4; ++dir) {
-            if (searchPath(r1, c1, new PlaceCondition(r2, c2), dir, 1, blocks, path)) {
+            if (searchPathByDFSImpl(r1, c1, condition, dir, 1, blocks, path)) {
+                Collections.reverse(path);
                 return true;
             }
         }
         return false;
     }
 
-    private static boolean searchPath(int srcR, int srcC, Condition condition, int direction,
-                                      int depth, Block[][] blocks, LinkPath path) {
+    private static boolean searchPathByDFSImpl(int srcR, int srcC, Condition condition, int direction,
+                                      int depth, Block[][] blocks, ArrayList<Point> path) {
         if (depth > 3) {
             return false;
         }
@@ -130,7 +137,7 @@ public class GameLogic {
             }
             if (r >= 0 && r < rows && c >= 0 && c < cols) {
                 if (condition.fulfill(r, c, blocks[r][c])) {
-                    path.add(r, c);
+                    path.add(new Point(r, c));
                     found = true;
                     break;
                 }
@@ -138,14 +145,117 @@ public class GameLogic {
                     break;
                 }
             }
-            if (searchPath(r, c, condition, nextDir1, depth + 1, blocks, path)
-                    || searchPath(r, c, condition, nextDir2, depth + 1, blocks, path)) {
+            if (searchPathByDFSImpl(r, c, condition, nextDir1, depth + 1, blocks, path)
+                    || searchPathByDFSImpl(r, c, condition, nextDir2, depth + 1, blocks, path)) {
                 found = true;
                 break;
             }
         }
         if (found) {
-            path.add(srcR, srcC);
+            path.add(new Point(srcR, srcC));
+        }
+        return found;
+    }
+
+    private static class Mark {
+        int depth;
+        int prevR;
+        int prevC;
+
+        Mark() {
+            depth = Integer.MAX_VALUE;
+            prevR = -1;
+            prevC = -1;
+        }
+    }
+
+    private static boolean searchPathByDP(int srcR, int srcC, Condition condition,
+                                          Block[][] blocks, ArrayList<Point> path) {
+        assert path.isEmpty();
+        int rows = blocks.length;
+        int cols = blocks[0].length;
+        Mark[][] mark = new Mark[rows + 2][cols + 2];
+        for (int i = 0; i < rows + 2; ++i) {
+            for (int j = 0; j < cols + 2; ++j) {
+                mark[i][j] = new Mark();
+            }
+        }
+        mark[srcR + 1][srcC + 1].depth = 0;
+        Queue<Point> queue = new ArrayDeque<Point>();
+        queue.add(new Point(srcR, srcC));
+        boolean found = false;
+        for (int depth = 0; depth <= 2 && !queue.isEmpty(); ++depth) {
+            Queue<Point> nextQueue = new ArrayDeque<>();
+            while (!queue.isEmpty()) {
+                Point point = queue.poll();
+                int r = point.row;
+                int c = point.col;
+                if (mark[r + 1][c + 1].depth < depth) {
+                    continue;
+                }
+                for (int dir = 0; dir < 4; ++dir) {
+                    int nr = r;
+                    int nc = c;
+                    while (true) {
+                        nr += dr[dir];
+                        nc += dc[dir];
+                        if (nr < -1 || nr > rows || nc < -1 || nc > cols) {
+                            break;
+                        }
+                        if (mark[nr+1][nc+1].depth < depth + 1) {
+                            continue;
+                        }
+
+                        if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
+                            if (condition.fulfill(nr, nc, blocks[nr][nc])) {
+                                found = true;
+                                mark[nr+1][nc+1].depth = depth + 1;
+                                mark[nr+1][nc+1].prevR = r;
+                                mark[nr+1][nc+1].prevC = c;
+                                path.add(new Point(nr, nc));
+                                break;
+                            }
+                            if (!blocks[nr][nc].isEmpty()) {
+                                break;
+                            }
+                        }
+                        mark[nr+1][nc+1].depth = depth + 1;
+                        mark[nr+1][nc+1].prevR = r;
+                        mark[nr+1][nc+1].prevC = c;
+                        nextQueue.add(new Point(nr, nc));
+                    }
+                    if (found) {
+                        break;
+                    }
+                }
+                if (found) {
+                    break;
+                }
+            }
+            if (found) {
+                break;
+            }
+            queue = nextQueue;
+        }
+        if (found) {
+            for (int i = 0; i < rows + 2; ++i) {
+                for (int j = 0; j < cols + 2; ++j) {
+                    //System.out.printf("mark[%d][%d] = (%d,%d), %d\n", i, j, mark[i][j].prevR, mark[i][j].prevC,
+                    //        mark[i][j].depth);
+                }
+            }
+
+            int lastR = path.get(0).row;
+            int lastC = path.get(0).col;
+            while (mark[lastR + 1][lastC + 1].depth != 0) {
+                Mark m = mark[lastR + 1][lastC + 1];
+                lastR = m.prevR;
+                lastC = m.prevC;
+                path.add(new Point(lastR, lastC));
+            }
+            Collections.reverse(path);
+        } else {
+            assert path.isEmpty();
         }
         return found;
     }
@@ -166,15 +276,13 @@ public class GameLogic {
         }
     }
 
-    public static boolean haveErasablePair(Block[][] blocks, LinkPath path) {
+    public static boolean haveErasablePair(Block[][] blocks, ArrayList<Point> path) {
         for (int i = 0; i < blocks.length; ++i) {
             for (int j = 0; j < blocks[0].length; ++j) {
                 if (!blocks[i][j].isEmpty()) {
                     Condition condition = new ImgIndexCondition(i, j, blocks[i][j].imgIndex);
-                    for (int dir = 0; dir < 4; ++dir) {
-                        if (searchPath(i, j, condition, dir, 1, blocks, path)) {
-                            return true;
-                        }
+                    if (searchPath(i, j, condition, blocks, path)) {
+                        return true;
                     }
                 }
             }

@@ -215,7 +215,17 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    public void playClickSound() {
+    @Override
+    public void onBlockPairErase() {
+        ScoreInfo info = mSetting.getScoreInfo();
+        info.addScoreForEraseOnePair();
+        mSetting.setScoreInfo(info);
+    }
 
+    @Override
+    public void onWin(int curLevel, double leftTimePercent) {
+        ScoreInfo info = mSetting.getScoreInfo();
+        info.addScoreForWinOneLevel(curLevel, leftTimePercent);
+        mSetting.setScoreInfo(info);
     }
 }

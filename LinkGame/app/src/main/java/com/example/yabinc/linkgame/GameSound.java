@@ -11,22 +11,6 @@ import java.util.jar.Attributes;
 /**
  * Created by yabinc on 2/5/16.
  */
-
-class SoundInfo {
-    boolean playClickSound;
-    boolean playBackgroundMusic;
-
-    SoundInfo() {
-        playClickSound = true;
-        playBackgroundMusic = false;
-    }
-
-    SoundInfo(boolean playClickSound, boolean playBackgroundMusic) {
-        this.playClickSound = playClickSound;
-        this.playBackgroundMusic = playBackgroundMusic;
-    }
-}
-
 public class GameSound {
     private Context mContext;
     private SoundPool mSoundPool;

@@ -1,6 +1,9 @@
 package com.example.yabinc.linkgame;
 
 import org.junit.Test;
+
+import java.util.ArrayList;
+
 import static org.junit.Assert.*;
 
 /**
@@ -30,7 +33,7 @@ public class GameLogicTest {
         String map = "xt" +
                      "tb";
         Block[][] blocks = fillBlocks(2, 2, map);
-        GameLogic.LinkPath path = new GameLogic.LinkPath();
+        ArrayList<Point> path = new ArrayList<>();
         assertFalse(GameLogic.canErase(0, 0, 0, 1, blocks, path));
         assertTrue(GameLogic.canErase(0, 1, 1, 0, blocks, path));
     }
@@ -41,7 +44,7 @@ public class GameLogicTest {
                      "xx" +
                      "tb";
         Block[][] blocks = fillBlocks(3, 2, map);
-        GameLogic.LinkPath path = new GameLogic.LinkPath();
+        ArrayList<Point> path = new ArrayList<>();
         assertTrue(GameLogic.canErase(0, 1, 2, 0, blocks, path));
     }
 
@@ -54,11 +57,20 @@ public class GameLogicTest {
                      "xxxx" +
                      "xxxt";
         Block[][] blocks = fillBlocks(6, 4, map);
-        GameLogic.LinkPath path = new GameLogic.LinkPath();
+        ArrayList<Point> path = new ArrayList<>();
         assertTrue(GameLogic.canErase(0, 3, 5, 3, blocks, path));
-        assertEquals(path.pointsR.size(), 4);
-        assertArrayEquals(path.pointsR.toArray(new Integer[0]), new Integer[]{5, 5, 0, 0});
-        assertArrayEquals(path.pointsC.toArray(new Integer[0]), new Integer[]{3, 4, 4, 3});
+        assertEquals(path.size(), 4);
+        int[][] expected = new int[][] {
+            {0, 3}, {0, 4}, {5, 4}, {5, 3}
+        };
+        for (int i = 0; i < 4; ++i) {
+            System.out.printf("%d, %d\n", path.get(i).row, path.get(i).col);
+        }
+        for (int i = 0; i < 4; ++i) {
+            assertEquals(path.get(i).row, expected[i][0]);
+            assertEquals(path.get(i).col, expected[i][1]);
+        }
+        path.clear();
         assertTrue(GameLogic.canErase(5, 3, 0, 3, blocks, path));
     }
 }

@@ -24,48 +24,6 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.jar.Attributes;
 
-class SizeInfo {
-    boolean useDefaultSize;
-    int rows;
-    int cols;
-    SizeInfo(boolean useDefaultSize, int rows, int cols) {
-        this.useDefaultSize = useDefaultSize;
-        this.rows = rows;
-        this.cols = cols;
-    }
-    SizeInfo() {
-        useDefaultSize = true;
-        rows = -1;
-        cols = -1;
-    }
-}
-
-class LevelInfo {
-    int curLevel;
-    int maxAchievedLevel;
-    int maxLevel;
-
-    LevelInfo(int curLevel, int maxAchievedLevel, int maxLevel) {
-        this.curLevel = curLevel;
-        this.maxAchievedLevel = maxAchievedLevel;
-        this.maxLevel = maxLevel;
-    }
-
-    LevelInfo() {
-        curLevel = -1;
-        maxAchievedLevel = -1;
-        maxLevel = -1;
-    }
-
-    void moveToNextLevel() {
-        curLevel = (curLevel + 1) % (maxLevel + 1);
-        if (curLevel == 0) {
-            curLevel = 1;
-        }
-        maxAchievedLevel = Math.max(maxAchievedLevel, curLevel);
-    }
-}
-
 /**
  * Created by yabinc on 1/21/16.
  */
@@ -93,6 +51,8 @@ public class GameView extends View implements GameState.OnStateChangeListener {
     public interface GameListener {
         public void onLevelChange(LevelInfo info);
         public void onBlockClick();
+        public void onBlockPairErase();
+        public void onWin(int curLevel, double leftTimePercent);
     }
 
     static class PictureArg {
@@ -191,7 +151,8 @@ public class GameView extends View implements GameState.OnStateChangeListener {
     }
 
     @Override
-    public void onWin(GameState state) {
+    public void onWin(GameState state, double leftTimePercent) {
+        mGameListener.onWin(mLevelInfo.curLevel, leftTimePercent);
         invalidate();
     }
 
@@ -203,6 +164,11 @@ public class GameView extends View implements GameState.OnStateChangeListener {
     @Override
     public void onBlockClick() {
         mGameListener.onBlockClick();
+    }
+
+    @Override
+    public void onBlockPairErase() {
+        mGameListener.onBlockPairErase();
     }
 
     @Override
@@ -254,8 +220,9 @@ public class GameView extends View implements GameState.OnStateChangeListener {
         timeR.right = timeR.left + (int)(timeR.width() * mGameState.getLeftTimePercent());
         canvas.drawRect(timeR, mGreenPaint);
 
-        int rows = mGameState.blocks.length;
-        int cols = mGameState.blocks[0].length;
+        Block[][] blocks = mGameState.getBlocks();
+        int rows = blocks.length;
+        int cols = blocks[0].length;
         int blockSize = Math.min(mViewInfo.blockRect.width() / cols, mViewInfo.blockRect.height() / rows);
         mViewInfo.blockHeight = mViewInfo.blockWidth = blockSize;
         Log.d(LOG_TAG, "r " + rows + ", c " + cols + ", w " + mViewInfo.blockRect.width() + ", h "
@@ -265,28 +232,29 @@ public class GameView extends View implements GameState.OnStateChangeListener {
         Rect dst = new Rect();
         for (int r = 0; r < rows; ++r) {
             for (int c = 0; c < cols; ++c) {
-                if (mGameState.blocks[r][c].isUnselected()) {
+                if (blocks[r][c].isUnselected()) {
                     dst.set(0, 0, mViewInfo.blockWidth, mViewInfo.blockHeight);
                     dst.offset(mViewInfo.blockRect.left + c * mViewInfo.blockWidth,
                                 mViewInfo.blockRect.top + r * mViewInfo.blockHeight);
-                    canvas.drawBitmap(mPictureInfo.animalBitmaps.get(mGameState.blocks[r][c].imgIndex),
+                    canvas.drawBitmap(mPictureInfo.animalBitmaps.get(blocks[r][c].imgIndex),
                             src, dst, null);
-                } else if (mGameState.blocks[r][c].isSelected()) {
+                } else if (blocks[r][c].isSelected()) {
                     dst.set(0, 0, mViewInfo.blockWidth, mViewInfo.blockHeight);
                     dst.offset(mViewInfo.blockRect.left + c * mViewInfo.blockWidth,
                             mViewInfo.blockRect.top + r * mViewInfo.blockHeight);
-                    canvas.drawBitmap(mPictureInfo.animalBitmaps.get(mGameState.blocks[r][c].imgIndex),
+                    canvas.drawBitmap(mPictureInfo.animalBitmaps.get(blocks[r][c].imgIndex),
                             src, dst, mSelectedImgPaint);
                 }
             }
         }
 
-        if (mGameState.linkPath != null) {
-            int lineCount = mGameState.linkPath.pointsR.size() - 1;
+        ArrayList<Point> linkPath = mGameState.getLinkPath();
+        if (linkPath != null) {
+            int lineCount = linkPath.size() - 1;
             float[] points = new float[lineCount * 4];
-            for (int i = 0, j = 0; i < mGameState.linkPath.pointsR.size(); ++i, j += 2) {
-                int r = mGameState.linkPath.pointsR.get(i);
-                int c = mGameState.linkPath.pointsC.get(i);
+            for (int i = 0, j = 0; i < linkPath.size(); ++i, j += 2) {
+                int r = linkPath.get(i).row;
+                int c = linkPath.get(i).col;
                 if (c >= 0 && c < cols) {
                     points[j] = c * mViewInfo.blockWidth + mViewInfo.blockWidth / 2;
                 } else if (c == -1) {
@@ -304,7 +272,7 @@ public class GameView extends View implements GameState.OnStateChangeListener {
                     points[j + 1] = rows * mViewInfo.blockHeight;
                 }
                 points[j + 1] += mViewInfo.blockRect.top;
-                if (i > 0 && i < mGameState.linkPath.pointsR.size() - 1) {
+                if (i > 0 && i < linkPath.size() - 1) {
                     j += 2;
                     points[j] = points[j - 2];
                     points[j + 1] = points[j - 1];
@@ -312,14 +280,15 @@ public class GameView extends View implements GameState.OnStateChangeListener {
             }
             canvas.drawLines(points, mLinePaint);
         }
-        if (mGameState.hintPath != null) {
-            Log.d(LOG_TAG, "draw hintPath r1 " + mGameState.hintPath.pointsR.get(0)
-                    + ", c1 " + mGameState.hintPath.pointsC.get(0)
-                    + ", r2 " + mGameState.hintPath.pointsR.get(mGameState.hintPath.pointsR.size() - 1)
-                    + ", c2 " + mGameState.hintPath.pointsC.get(mGameState.hintPath.pointsC.size() - 1));
-            for (int i = 0; i < mGameState.hintPath.pointsR.size(); i += mGameState.hintPath.pointsR.size() - 1) {
-                int r = mGameState.hintPath.pointsR.get(i);
-                int c = mGameState.hintPath.pointsC.get(i);
+        ArrayList<Point> hintPoints = mGameState.getHintPoints();
+        if (hintPoints != null) {
+            Log.d(LOG_TAG, "draw hintPath r1 " + hintPoints.get(0).row
+                    + ", c1 " + hintPoints.get(0).col
+                    + ", r2 " + hintPoints.get(1).row
+                    + ", c2 " + hintPoints.get(1).col);
+            for (int i = 0; i < 2; i++) {
+                int r = hintPoints.get(i).row;
+                int c = hintPoints.get(i).col;
                 dst.set(0, 0, mViewInfo.blockWidth, mViewInfo.blockHeight);
                 dst.offset(mViewInfo.blockRect.left + c * mViewInfo.blockWidth,
                         mViewInfo.blockRect.top + r * mViewInfo.blockHeight);
@@ -370,14 +339,14 @@ public class GameView extends View implements GameState.OnStateChangeListener {
         } else if (mGameState.isPause()) {
             resume();
         } else if (mGameState.isRun()) {
-            if (mGameState.linkPath != null || !mViewInfo.blockRect.contains((int) x, (int) y)) {
+            if (mGameState.getLinkPath() != null || !mViewInfo.blockRect.contains((int) x, (int) y)) {
                 return;
             }
             x -= mViewInfo.blockRect.left;
             y -= mViewInfo.blockRect.top;
             int c = (int) (x / mViewInfo.blockWidth);
             int r = (int) (y / mViewInfo.blockHeight);
-            if (r < 0 || r >= mGameState.blocks.length || c < 0 || c >= mGameState.blocks[0].length) {
+            if (r < 0 || r >= mGameState.getBlocks().length || c < 0 || c >= mGameState.getBlocks()[0].length) {
                 return;
             }
             Log.d(LOG_TAG, "tapPos, x " + x + ", y " + y + ", w " + mViewInfo.blockWidth + ", h "

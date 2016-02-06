@@ -3,44 +3,13 @@ package com.example.yabinc.linkgame;
 import android.os.Handler;
 import android.os.Message;
 
+import java.util.ArrayList;
 import java.util.Timer;
 import java.util.TimerTask;
 
 /**
  * Created by yabinc on 1/31/16.
  */
-
-class Block {
-    final static int STATE_IMAGE_UNSELECTED = 0;
-    final static int STATE_IMAGE_SELECTED = 1;
-    final static int STATE_EMPTY = 2;
-    final static Block EMPTY = new Block(STATE_EMPTY, -1);
-
-    int state;
-    int imgIndex;
-
-    Block(int state, int imgIndex) {
-        this.state = state;
-        this.imgIndex = imgIndex;
-    }
-
-    boolean isEmpty() {
-        return state == STATE_EMPTY;
-    }
-    boolean isUnselected() {
-        return state == STATE_IMAGE_UNSELECTED;
-    }
-    boolean isSelected() {
-        return state == STATE_IMAGE_SELECTED;
-    }
-    boolean isSameImage(Block other) {
-        return (state != STATE_EMPTY && other.state != STATE_EMPTY && imgIndex == other.imgIndex);
-    }
-    boolean isSameImage(int imgIndex) {
-        return (state != STATE_EMPTY && imgIndex == this.imgIndex);
-    }
-}
-
 class GameState {
     private static final int INIT_TIME_IN_SEC = 5 * 60;
     private static final int ERASE_INC_TIME_IN_SEC = 5;
@@ -53,20 +22,21 @@ class GameState {
 
     public interface OnStateChangeListener {
         public void onStateChange(GameState state);
-        public void onWin(GameState state);
+        public void onWin(GameState state, double leftTimePercent);
         public void onLose(GameState state);
         public void onBlockClick();
+        public void onBlockPairErase();
     }
 
-    int state = GAME_BEFORE_START;
+    private int state = GAME_BEFORE_START;
     private int curLevel;
-    Block[][] blocks;
-    int selectedRow = -1;
-    int selectedCol = -1;
-    GameLogic.LinkPath linkPath;
-    GameLogic.LinkPath hintPath;
-    Timer mTimer;
-    int leftTimeInSec;
+    private Block[][] blocks;
+    private int selectedRow = -1;
+    private int selectedCol = -1;
+    private ArrayList<Point> linkPath;
+    private ArrayList<Point> hintPoints;
+    private Timer mTimer;
+    private int leftTimeInSec;
 
     private final MyHandler mHandler;
     private final OnStateChangeListener mListener;
@@ -84,7 +54,7 @@ class GameState {
         selectedRow = -1;
         selectedCol = -1;
         linkPath = null;
-        hintPath = null;
+        hintPoints = null;
         leftTimeInSec = INIT_TIME_IN_SEC;
         checkAndShuffleBlocks();
         startTimer();
@@ -93,7 +63,7 @@ class GameState {
 
     private void checkAndShuffleBlocks() {
         GameLogic.updateBlocksByLevel(blocks, curLevel);
-        GameLogic.LinkPath path = new GameLogic.LinkPath();
+        ArrayList<Point> path = new ArrayList<>();
         while (!GameLogic.haveErasablePair(blocks, path)) {
             GameLogic.shuffleBlocks(blocks);
             GameLogic.updateBlocksByLevel(blocks, curLevel);
@@ -116,6 +86,18 @@ class GameState {
         return state == GAME_PAUSE;
     }
 
+    Block[][] getBlocks() {
+        return blocks;
+    }
+
+    ArrayList<Point> getLinkPath() {
+        return linkPath;
+    }
+
+    ArrayList<Point> getHintPoints() {
+        return hintPoints;
+    }
+
     void selectBlock(int row, int col) {
         if (blocks[row][col].isUnselected()) {
             blocks[row][col].state = Block.STATE_IMAGE_SELECTED;
@@ -123,12 +105,12 @@ class GameState {
                 selectedRow = row;
                 selectedCol = col;
             } else {
-                GameLogic.LinkPath path = new GameLogic.LinkPath();
+                ArrayList<Point> path = new ArrayList<>();
                 if (GameLogic.canErase(row, col, selectedRow, selectedCol, blocks, path)) {
                     linkPath = path;
                     selectedRow = -1;
                     selectedCol = -1;
-                    hintPath = null;
+                    hintPoints = null;
                     leftTimeInSec = Math.min(leftTimeInSec + ERASE_INC_TIME_IN_SEC, INIT_TIME_IN_SEC);
                     mHandler.sendEmptyMessageDelayed(MyHandler.MSG_ERASE_LINK_PATH, 200);
                 } else {
@@ -154,6 +136,12 @@ class GameState {
         }
     }
 
+    private void onBlockPairErase() {
+        if (mListener != null) {
+            mListener.onBlockPairErase();
+        }
+    }
+
     private void onStateChange() {
         if (mListener != null) {
             mListener.onStateChange(this);
@@ -164,7 +152,7 @@ class GameState {
         state = GAME_SUCCESS;
         stopTimer();
         if (mListener != null) {
-            mListener.onWin(this);
+            mListener.onWin(this, (double)leftTimeInSec / INIT_TIME_IN_SEC);
         }
     }
 
@@ -193,10 +181,12 @@ class GameState {
     }
 
     void giveHint() {
-        if (hintPath == null) {
-            GameLogic.LinkPath path = new GameLogic.LinkPath();
+        if (hintPoints == null) {
+            ArrayList<Point> path = new ArrayList<>();
             if (GameLogic.haveErasablePair(blocks, path)) {
-                hintPath = path;
+                hintPoints = new ArrayList<>();
+                hintPoints.add(path.get(0));
+                hintPoints.add(path.get(path.size() - 1));
                 onStateChange();
             }
         }
@@ -211,9 +201,9 @@ class GameState {
         public void handleMessage(Message msg) {
             if (msg.what == MSG_ERASE_LINK_PATH) {
                 if (linkPath != null) {
-                    int len = linkPath.pointsR.size();
-                    blocks[linkPath.pointsR.get(0)][linkPath.pointsC.get(0)] = Block.EMPTY;
-                    blocks[linkPath.pointsR.get(len-1)][linkPath.pointsC.get(len-1)] = Block.EMPTY;
+                    blocks[linkPath.get(0).row][linkPath.get(0).col] = Block.EMPTY;
+                    blocks[linkPath.get(linkPath.size()-1).row][linkPath.get(linkPath.size()-1).col] = Block.EMPTY;
+                    onBlockPairErase();
                     linkPath = null;
                     if (GameLogic.isSuccess(blocks)) {
                         setSuccess();
