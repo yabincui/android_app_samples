@@ -73,6 +73,7 @@ public class Setting {
     public ScoreInfo getScoreInfo() {
         if (mScoreInfo == null) {
             ScoreInfo info = new ScoreInfo();
+            info.playTimes = mSharedPreferences.getLong("ScoreInfo_playTimes", info.playTimes);
             info.maxWinLevelInOneTime = mSharedPreferences.getLong("ScoreInfo_maxWinLevelInOneTime",
                     info.maxWinLevelInOneTime);
             info.totalWinLevel = mSharedPreferences.getLong("ScoreInfo_totalWinLevel",
@@ -90,6 +91,7 @@ public class Setting {
 
     public void setScoreInfo(ScoreInfo info) {
         SharedPreferences.Editor editor = mSharedPreferences.edit();
+        editor.putLong("ScoreInfo_playTimes", info.playTimes);
         editor.putLong("ScoreInfo_maxWinLevelInOneTime", info.maxWinLevelInOneTime);
         editor.putLong("ScoreInfo_totalWinLevel", info.totalWinLevel);
         editor.putLong("ScoreInfo_curWinLevel", info.curWinLevel);

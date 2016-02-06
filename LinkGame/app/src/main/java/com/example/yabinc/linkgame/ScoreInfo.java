@@ -9,6 +9,7 @@ class ScoreInfo {
     static final long SCORE_MUL_FOR_CUR_LEVEL = 5;
     static final long SCORE_MUL_FOR_CONTINUOUS_WIN = 10;
 
+    long playTimes;
     long maxWinLevelInOneTime;
     long totalWinLevel;
     long curWinLevel;
@@ -17,6 +18,7 @@ class ScoreInfo {
     long curScore;
 
     ScoreInfo() {
+        playTimes = 1;
         maxWinLevelInOneTime = 0;
         totalWinLevel = 0;
         curWinLevel = 0;
@@ -51,5 +53,6 @@ class ScoreInfo {
     void lose() {
         curScore = 0;
         curWinLevel = 0;
+        playTimes++;
     }
 }

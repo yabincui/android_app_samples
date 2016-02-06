@@ -12,11 +12,22 @@
         <item>Level 8 Go Inner</item>
         <item>Level 9 Go Outer</item>
     </string-array>
+    <string name="menu_view_score">View Score</string>
+    <string name="menu_hint">Hint</string>
     <string name="menu_pause">Pause</string>
     <string name="menu_resume">Resume</string>
+    <string name="menu_restart">Restart</string>
+    <string name="menu_select_size">Select Size</string>
+    <string name="menu_select_level">Select Level</string>
     <string name="menu_play_click_sound">Play Click Sound</string>
     <string name="menu_pause_click_sound">Stop Click Sound</string>
     <string name="menu_play_background_music">Play Background Music</string>
     <string name="menu_pause_background_music">Stop Background Music</string>
-    <string name="title_activity_score">ScoreActivity</string>
+
+    <string name="title_activity_score">Score Information</string>
+    <string name="text_play_times">Play Times</string>
+    <string name="text_total_win_level">Total Win Levels</string>
+    <string name="text_max_win_level_in_one_time">Max Win Levels In One Time</string>
+    <string name="text_total_score">Total Score</string>
+    <string name="text_max_score_in_one_time">Max Score In One Time</string>
 </resources>

@@ -1,17 +1,17 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools" tools:context=".MainActivity">
-    <item android:id="@+id/action_settings" android:title="@string/action_settings"
+    <item android:id="@+id/action_view_score" android:title="@string/menu_view_score"
         android:orderInCategory="100" app:showAsAction="never" />
-    <item android:id="@+id/action_hint" android:title="Hint"
+    <item android:id="@+id/action_hint" android:title="@string/menu_hint"
         android:orderInCategory="100" app:showAsAction="never" />
     <item android:id="@+id/action_pause_resume" android:title=""
         android:orderInCategory="100" app:showAsAction="never" />
-    <item android:id="@+id/action_restart" android:title="Restart"
+    <item android:id="@+id/action_restart" android:title="@string/menu_restart"
         android:orderInCategory="100" app:showAsAction="never" />
-    <item android:id="@+id/action_select_size" android:title="Select Size"
+    <item android:id="@+id/action_select_size" android:title="@string/menu_select_size"
         android:orderInCategory="100" app:showAsAction="never" />
-    <item android:id="@+id/action_select_level" android:title="Select Level"
+    <item android:id="@+id/action_select_level" android:title="@string/menu_select_level"
         android:orderInCategory="100" app:showAsAction="never" />
     <item android:id="@+id/action_play_pause_click_sound" app:title=""
         android:orderInCategory="100" app:showAsAction="never" />

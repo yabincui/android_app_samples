@@ -9,6 +9,59 @@
     app:layout_behavior="@string/appbar_scrolling_view_behavior"
     tools:showIn="@layout/activity_score" tools:context="com.example.yabinc.linkgame.ScoreActivity">
 
+<GridLayout
+    android:layout_centerVertical="true"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:columnCount="2">
 
+    <TextView
+        android:text="@string/text_play_times"
+        android:textSize="20dp"
+        android:layout_marginRight="10dp"
+        />
+    <TextView
+        android:id="@+id/show_play_times"
+        android:textSize="20dp"
+        />
+
+    <TextView
+        android:text="@string/text_total_win_level"
+        android:textSize="20dp"
+        android:layout_marginRight="10dp"
+        />
+    <TextView
+        android:id="@+id/show_total_win_level"
+        android:textSize="20dp"
+        />
+    <TextView
+        android:text="@string/text_max_win_level_in_one_time"
+        android:textSize="20dp"
+        android:layout_marginRight="10dp"
+        />
+    <TextView
+        android:id="@+id/show_max_win_level_in_one_time"
+        android:textSize="20dp"
+        />
+    <TextView
+        android:text="@string/text_total_score"
+        android:textSize="20dp"
+        android:layout_marginRight="10dp"
+        />
+    <TextView
+        android:id="@+id/show_total_score"
+        android:textSize="20dp"
+        />
+    <TextView
+        android:text="@string/text_max_score_in_one_time"
+        android:textSize="20dp"
+        android:layout_marginRight="10dp"/>
+
+    <TextView
+        android:id="@+id/show_max_score_in_one_time"
+        android:textSize="20dp"
+        />
+
+</GridLayout>
 
 </RelativeLayout>

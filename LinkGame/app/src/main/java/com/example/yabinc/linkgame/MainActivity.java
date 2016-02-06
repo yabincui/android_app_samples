@@ -2,6 +2,7 @@ package com.example.yabinc.linkgame;
 
 import android.app.DialogFragment;
 import android.app.FragmentTransaction;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -114,8 +115,11 @@ public class MainActivity extends AppCompatActivity
         int id = item.getItemId();
 
         switch (item.getItemId()) {
-            case R.id.action_settings:
+            case R.id.action_view_score: {
+                Intent intent = new Intent(this, ScoreActivity.class);
+                startActivity(intent);
                 break;
+            }
             case R.id.action_hint:
                 mGameView.hint();
                 break;
@@ -126,9 +130,11 @@ public class MainActivity extends AppCompatActivity
                     mGameView.pause();
                 }
                 break;
-            case R.id.action_restart:
+            case R.id.action_restart: {
+                onLose();
                 mGameView.restart();
                 break;
+            }
             case R.id.action_select_size:
                 showSelectSizeDialog();
                 break;
@@ -226,6 +232,13 @@ public class MainActivity extends AppCompatActivity
     public void onWin(int curLevel, double leftTimePercent) {
         ScoreInfo info = mSetting.getScoreInfo();
         info.addScoreForWinOneLevel(curLevel, leftTimePercent);
+        mSetting.setScoreInfo(info);
+    }
+
+    @Override
+    public void onLose() {
+        ScoreInfo info = mSetting.getScoreInfo();
+        info.lose();
         mSetting.setScoreInfo(info);
     }
 }

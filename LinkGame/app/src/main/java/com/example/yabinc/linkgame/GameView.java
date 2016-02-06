@@ -53,6 +53,7 @@ public class GameView extends View implements GameState.OnStateChangeListener {
         public void onBlockClick();
         public void onBlockPairErase();
         public void onWin(int curLevel, double leftTimePercent);
+        public void onLose();
     }
 
     static class PictureArg {
@@ -158,6 +159,7 @@ public class GameView extends View implements GameState.OnStateChangeListener {
 
     @Override
     public void onLose(GameState state) {
+        mGameListener.onLose();
         invalidate();
     }
 

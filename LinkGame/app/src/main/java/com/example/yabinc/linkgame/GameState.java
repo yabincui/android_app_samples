@@ -11,8 +11,10 @@ import java.util.TimerTask;
  * Created by yabinc on 1/31/16.
  */
 class GameState {
-    private static final int INIT_TIME_IN_SEC = 5 * 60;
-    private static final int ERASE_INC_TIME_IN_SEC = 5;
+    private static final int STANDARD_BLOCK_COUNT = 12 * 12;
+    private static final int INIT_TIME_IN_SEC = 3 * 60;
+    private static final int MIN_INIT_TIME_IN_SEC = 10;
+    private static final int ERASE_INC_TIME_IN_SEC = 3;
 
     public static final int GAME_BEFORE_START = 0;
     public static final int GAME_RUN = 1;
@@ -36,6 +38,7 @@ class GameState {
     private ArrayList<Point> linkPath;
     private ArrayList<Point> hintPoints;
     private Timer mTimer;
+    private int totalTimeInSec;
     private int leftTimeInSec;
 
     private final MyHandler mHandler;
@@ -55,7 +58,10 @@ class GameState {
         selectedCol = -1;
         linkPath = null;
         hintPoints = null;
-        leftTimeInSec = INIT_TIME_IN_SEC;
+        int blockCount = blocks.length * blocks[0].length;
+        totalTimeInSec = (blockCount >= STANDARD_BLOCK_COUNT) ? INIT_TIME_IN_SEC :
+                Math.max(MIN_INIT_TIME_IN_SEC, (int)((float)blockCount / STANDARD_BLOCK_COUNT * INIT_TIME_IN_SEC));
+        leftTimeInSec = totalTimeInSec;
         checkAndShuffleBlocks();
         startTimer();
         onStateChange();
@@ -111,7 +117,7 @@ class GameState {
                     selectedRow = -1;
                     selectedCol = -1;
                     hintPoints = null;
-                    leftTimeInSec = Math.min(leftTimeInSec + ERASE_INC_TIME_IN_SEC, INIT_TIME_IN_SEC);
+                    leftTimeInSec = Math.min(leftTimeInSec + ERASE_INC_TIME_IN_SEC, totalTimeInSec);
                     mHandler.sendEmptyMessageDelayed(MyHandler.MSG_ERASE_LINK_PATH, 200);
                 } else {
                     blocks[selectedRow][selectedCol].state = Block.STATE_IMAGE_UNSELECTED;
@@ -152,7 +158,7 @@ class GameState {
         state = GAME_SUCCESS;
         stopTimer();
         if (mListener != null) {
-            mListener.onWin(this, (double)leftTimeInSec / INIT_TIME_IN_SEC);
+            mListener.onWin(this, (double)leftTimeInSec / totalTimeInSec);
         }
     }
 
@@ -177,7 +183,7 @@ class GameState {
     }
 
     float getLeftTimePercent() {
-        return (float)leftTimeInSec / INIT_TIME_IN_SEC;
+        return (float)leftTimeInSec / totalTimeInSec;
     }
 
     void giveHint() {
