@@ -12,6 +12,8 @@ public class Setting {
     private static final String FILE_KEY = "PREFERENCE_FILE_KEY";
     private Context mContext;
     private SharedPreferences mSharedPreferences;
+    private SizeInfo mSizeInfo;
+    private LevelInfo mLevelInfo;
     private SoundInfo mSoundInfo;
     private ScoreInfo mScoreInfo;
 
@@ -21,11 +23,14 @@ public class Setting {
     }
 
     public SizeInfo getSizeInfo() {
-        SizeInfo info = new SizeInfo();
-        info.useDefaultSize = mSharedPreferences.getBoolean("SizeInfo_useDefaultSize", info.useDefaultSize);
-        info.rows = mSharedPreferences.getInt("SizeInfo_rows", info.rows);
-        info.cols = mSharedPreferences.getInt("SizeInfo_cols", info.cols);
-        return info;
+        if (mSizeInfo == null) {
+            SizeInfo info = new SizeInfo();
+            info.useDefaultSize = mSharedPreferences.getBoolean("SizeInfo_useDefaultSize", info.useDefaultSize);
+            info.rows = mSharedPreferences.getInt("SizeInfo_rows", info.rows);
+            info.cols = mSharedPreferences.getInt("SizeInfo_cols", info.cols);
+            mSizeInfo = info;
+        }
+        return mSizeInfo;
     }
 
     public void setSizeInfo(SizeInfo info) {
@@ -34,14 +39,18 @@ public class Setting {
         editor.putInt("SizeInfo_rows", info.rows);
         editor.putInt("SizeInfo_cols", info.cols);
         editor.commit();
+        mSizeInfo = info;
     }
 
     public LevelInfo getLevelInfo() {
-        LevelInfo info = new LevelInfo();
-        info.curLevel = mSharedPreferences.getInt("LevelInfo_curLevel", info.curLevel);
-        info.maxAchievedLevel = mSharedPreferences.getInt("LevelInfo_maxAchievedLevel", info.maxAchievedLevel);
-        info.maxLevel = mSharedPreferences.getInt("LevelInfo_maxLevel", info.maxLevel);
-        return info;
+        if (mLevelInfo == null) {
+            LevelInfo info = new LevelInfo();
+            info.curLevel = mSharedPreferences.getInt("LevelInfo_curLevel", info.curLevel);
+            info.maxAchievedLevel = mSharedPreferences.getInt("LevelInfo_maxAchievedLevel", info.maxAchievedLevel);
+            info.maxLevel = mSharedPreferences.getInt("LevelInfo_maxLevel", info.maxLevel);
+            mLevelInfo = info;
+        }
+        return mLevelInfo;
     }
 
     public void setLevelInfo(LevelInfo info) {
@@ -50,6 +59,7 @@ public class Setting {
         editor.putInt("LevelInfo_maxAchievedLevel", info.maxAchievedLevel);
         editor.putInt("LevelInfo_maxLevel", info.maxLevel);
         editor.commit();
+        mLevelInfo = info;
     }
 
     public SoundInfo getSoundInfo() {

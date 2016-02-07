@@ -18,13 +18,19 @@ import android.view.MenuItem;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.logging.Level;
+
+import de.greenrobot.event.EventBus;
+import de.greenrobot.event.Subscribe;
 
 public class MainActivity extends AppCompatActivity
         implements SelectSizeDialogFragment.SelectSizeDialogListener,
-        SelectLevelDialogFragment.SelectLevelDialogListener,
-        GameView.GameListener {
+        SelectLevelDialogFragment.SelectLevelDialogListener {
 
     private static final String LOG_TAG = "MainActivity";
+
+    private EventBus eventBus = EventBus.getDefault();
+
     private String[] levelNames;
     private Setting mSetting;
     private GameView mGameView;
@@ -51,12 +57,10 @@ public class MainActivity extends AppCompatActivity
         pictureArg.loseBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.lose);
         pictureArg.pauseBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.pause);
         mGameView = (GameView) findViewById(R.id.gameView);
-        mGameView.init(pictureArg, mSetting.getSizeInfo(), levelInfo, this);
+        eventBus.register(this);
+        eventBus.register(mGameView);
+        mGameView.init(pictureArg, mSetting.getSizeInfo(), levelInfo.curLevel);
         mGameSound = new GameSound(this);
-    }
-
-    public void setTitleByLevel(int level) {
-        setTitle(levelNames[level - 1]);
     }
 
     @Override
@@ -75,6 +79,13 @@ public class MainActivity extends AppCompatActivity
         if (mSetting.getSoundInfo().playBackgroundMusic) {
             mGameSound.startBackgroundMusic();
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        eventBus.unregister(this);
+        eventBus.unregister(mGameView);
     }
 
     @Override
@@ -131,7 +142,7 @@ public class MainActivity extends AppCompatActivity
                 }
                 break;
             case R.id.action_restart: {
-                onLose();
+                eventBus.post(GameEvent.createEvent(GameEvent.GAME_LOSE));
                 mGameView.restart();
                 break;
             }
@@ -162,16 +173,6 @@ public class MainActivity extends AppCompatActivity
                 return super.onOptionsItemSelected(item);
         }
         return true;
-    }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
     }
 
     private void showSelectSizeDialog() {
@@ -205,40 +206,41 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onSelectLevel(int level) {
         LevelInfo levelInfo = mSetting.getLevelInfo();
-        levelInfo.curLevel = level;
-        mGameView.setLevelInfo(levelInfo);
-    }
-
-    @Override
-    public void onLevelChange(LevelInfo info) {
-        mSetting.setLevelInfo(info);
-    }
-
-    @Override
-    public void onBlockClick() {
-        if (mSetting.getSoundInfo().playClickSound) {
-            mGameSound.playClickSound();
+        if (levelInfo.curLevel != level) {
+            levelInfo.curLevel = level;
+            mSetting.setLevelInfo(levelInfo);
+            mGameView.setCurLevel(levelInfo.curLevel);
+            mGameView.restart();
         }
     }
 
-    @Override
-    public void onBlockPairErase() {
-        ScoreInfo info = mSetting.getScoreInfo();
-        info.addScoreForEraseOnePair();
-        mSetting.setScoreInfo(info);
-    }
+    @Subscribe
+    public void onEvent(GameEvent event) {
+        if (event.getEvent() == GameEvent.GAME_WIN) {
+            LevelInfo levelInfo = mSetting.getLevelInfo();
+            ScoreInfo scoreInfo = mSetting.getScoreInfo();
+            scoreInfo.addScoreForWinOneLevel(levelInfo.curLevel, event.getWinLeftTimePercent());
+            mSetting.setScoreInfo(scoreInfo);
 
-    @Override
-    public void onWin(int curLevel, double leftTimePercent) {
-        ScoreInfo info = mSetting.getScoreInfo();
-        info.addScoreForWinOneLevel(curLevel, leftTimePercent);
-        mSetting.setScoreInfo(info);
-    }
-
-    @Override
-    public void onLose() {
-        ScoreInfo info = mSetting.getScoreInfo();
-        info.lose();
-        mSetting.setScoreInfo(info);
+            levelInfo.moveToNextLevel();
+            mSetting.setLevelInfo(levelInfo);
+            mGameView.setCurLevel(levelInfo.curLevel);
+        } else if (event.getEvent() == GameEvent.GAME_LOSE) {
+            ScoreInfo info = mSetting.getScoreInfo();
+            info.lose();;
+            mSetting.setScoreInfo(info);
+        } else if (event.getEvent() == GameEvent.GAME_BLOCK_PAIR_ERASE) {
+            ScoreInfo info = mSetting.getScoreInfo();
+            info.addScoreForEraseOnePair();
+            mSetting.setScoreInfo(info);
+        } else if (event.getEvent() == GameEvent.GAME_BLOCK_CLICK) {
+            SoundInfo info = mSetting.getSoundInfo();
+            if (info.playClickSound) {
+                mGameSound.playClickSound();
+            }
+        } else if (event.getEvent() == GameEvent.GAME_START_ONE_LEVEL) {
+            LevelInfo info = mSetting.getLevelInfo();
+            setTitle(levelNames[info.curLevel - 1]);
+        }
     }
 }

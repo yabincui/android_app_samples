@@ -24,14 +24,18 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.jar.Attributes;
 
+import de.greenrobot.event.EventBus;
+import de.greenrobot.event.Subscribe;
+
 /**
  * Created by yabinc on 1/21/16.
  */
-public class GameView extends View implements GameState.OnStateChangeListener {
-
+public class GameView extends View {
     private static final int ANIMAL_BITMAP_WIDTH = 100;
     private static final int ANIMAL_BITMAP_HEIGHT = 100;
     private static final String LOG_TAG = "GameView";
+
+    private EventBus eventBus = EventBus.getDefault();
 
     private PictureInfo mPictureInfo;
     private Paint mLinePaint;
@@ -44,17 +48,8 @@ public class GameView extends View implements GameState.OnStateChangeListener {
 
     private SizeInfo mSizeInfo;
     private ViewInfo mViewInfo;
-    private LevelInfo mLevelInfo;
-    private GameListener mGameListener;
+    private int mCurLevel;
     private GameState mGameState;
-
-    public interface GameListener {
-        public void onLevelChange(LevelInfo info);
-        public void onBlockClick();
-        public void onBlockPairErase();
-        public void onWin(int curLevel, double leftTimePercent);
-        public void onLose();
-    }
 
     static class PictureArg {
         Bitmap animalBitmap;
@@ -63,14 +58,14 @@ public class GameView extends View implements GameState.OnStateChangeListener {
         Bitmap pauseBitmap;
     }
 
-    class PictureInfo {
+    private class PictureInfo {
         Bitmap winBitmap;
         Bitmap loseBitmap;
         Bitmap pauseBitmap;
         ArrayList<Bitmap> animalBitmaps;
     }
 
-    class ViewInfo {
+    private class ViewInfo {
         Rect globalRect;
         Rect timeRect;
         Rect blockRect;
@@ -83,10 +78,8 @@ public class GameView extends View implements GameState.OnStateChangeListener {
         super(context, attributeSet);
     }
 
-    public void init(PictureArg pictureArg, SizeInfo sizeInfo, LevelInfo levelInfo,
-                     GameListener gameListener) {
-        mLevelInfo = levelInfo;
-        mGameListener = gameListener;
+    public void init(PictureArg pictureArg, SizeInfo sizeInfo, int curLevel) {
+        mCurLevel = curLevel;
         mPictureInfo = new PictureInfo();
         mPictureInfo.winBitmap = pictureArg.winBitmap;
         mPictureInfo.loseBitmap = pictureArg.loseBitmap;
@@ -119,8 +112,10 @@ public class GameView extends View implements GameState.OnStateChangeListener {
         mDetector = new GestureDetector(getContext(), new MyGestureListener());
         mSizeInfo = sizeInfo;
         mViewInfo = new ViewInfo();
-        mGameState = new GameState(this);
+        mGameState = new GameState();
     }
+
+
 
     private boolean isBlank(Bitmap bitmap, int x, int y, int width, int height) {
         for (int i = 0; i < width; ++i) {
@@ -142,35 +137,9 @@ public class GameView extends View implements GameState.OnStateChangeListener {
         } else {
             blocks = GameLogic.createBlocks(mSizeInfo.rows, mSizeInfo.cols, mPictureInfo.animalBitmaps.size());
         }
-        mGameState.start(blocks, mLevelInfo.curLevel);
-        ((MainActivity)getContext()).setTitleByLevel(mLevelInfo.curLevel);
-    }
-
-    @Override
-    public void onStateChange(GameState state) {
+        mGameState.start(blocks, mCurLevel);
+        eventBus.post(GameEvent.createEvent(GameEvent.GAME_START_ONE_LEVEL));
         invalidate();
-    }
-
-    @Override
-    public void onWin(GameState state, double leftTimePercent) {
-        mGameListener.onWin(mLevelInfo.curLevel, leftTimePercent);
-        invalidate();
-    }
-
-    @Override
-    public void onLose(GameState state) {
-        mGameListener.onLose();
-        invalidate();
-    }
-
-    @Override
-    public void onBlockClick() {
-        mGameListener.onBlockClick();
-    }
-
-    @Override
-    public void onBlockPairErase() {
-        mGameListener.onBlockPairErase();
     }
 
     @Override
@@ -333,8 +302,6 @@ public class GameView extends View implements GameState.OnStateChangeListener {
 
     private void tapPos(float x, float y) {
         if (mGameState.isSuccess()) {
-            mLevelInfo.moveToNextLevel();
-            mGameListener.onLevelChange(mLevelInfo);
             restart();
         } else if (mGameState.isLose()) {
             restart();
@@ -392,20 +359,18 @@ public class GameView extends View implements GameState.OnStateChangeListener {
     public boolean setSize(SizeInfo info) {
         mSizeInfo = info;
         initState();
-        invalidate();
         return true;
     }
 
-    public LevelInfo getLevelInfo() {
-        return mLevelInfo;
+    public void setCurLevel(int curLevel) {
+        mCurLevel = curLevel;
     }
 
-    public void setLevelInfo(LevelInfo levelInfo) {
-        int oldLevel = mLevelInfo.curLevel;
-        mLevelInfo = levelInfo;
-        mGameListener.onLevelChange(mLevelInfo);
-        if (oldLevel != levelInfo.curLevel) {
-            restart();
+    @Subscribe
+    public void onEvent(GameEvent event) {
+        if (event.getEvent() == GameEvent.GAME_REDARW) {
+            Log.d(LOG_TAG, "getEvent, redraw");
+            invalidate();
         }
     }
 }

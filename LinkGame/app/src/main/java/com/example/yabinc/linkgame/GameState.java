@@ -2,15 +2,19 @@ package com.example.yabinc.linkgame;
 
 import android.os.Handler;
 import android.os.Message;
+import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import de.greenrobot.event.EventBus;
+
 /**
  * Created by yabinc on 1/31/16.
  */
 class GameState {
+    private static final String LOG_TAG = "GameState";
     private static final int STANDARD_BLOCK_COUNT = 12 * 12;
     private static final int INIT_TIME_IN_SEC = 3 * 60;
     private static final int MIN_INIT_TIME_IN_SEC = 10;
@@ -22,13 +26,6 @@ class GameState {
     public static final int GAME_PAUSE = 3;
     public static final int GAME_LOSE = 4;
 
-    public interface OnStateChangeListener {
-        public void onStateChange(GameState state);
-        public void onWin(GameState state, double leftTimePercent);
-        public void onLose(GameState state);
-        public void onBlockClick();
-        public void onBlockPairErase();
-    }
 
     private int state = GAME_BEFORE_START;
     private int curLevel;
@@ -41,16 +38,10 @@ class GameState {
     private int totalTimeInSec;
     private int leftTimeInSec;
 
-    private final MyHandler mHandler;
-    private final OnStateChangeListener mListener;
+    private final MyHandler mHandler = new MyHandler();
+    private final EventBus eventBus = EventBus.getDefault();
 
-
-    GameState(OnStateChangeListener listener) {
-        mHandler = new MyHandler();
-        mListener = listener;
-    }
-
-    void start(Block[][] blocks, int curLevel) {
+    public void start(Block[][] blocks, int curLevel) {
         this.curLevel = curLevel;
         state = GAME_RUN;
         this.blocks = blocks;
@@ -64,7 +55,6 @@ class GameState {
         leftTimeInSec = totalTimeInSec;
         checkAndShuffleBlocks();
         startTimer();
-        onStateChange();
     }
 
     private void checkAndShuffleBlocks() {
@@ -76,35 +66,35 @@ class GameState {
         }
     }
 
-    boolean isBeforeStart() {
+    public boolean isBeforeStart() {
         return state == GAME_BEFORE_START;
     }
-    boolean isRun() {
+    public boolean isRun() {
         return state == GAME_RUN;
     }
-    boolean isSuccess() {
+    public boolean isSuccess() {
         return state == GAME_SUCCESS;
     }
-    boolean isLose() {
+    public boolean isLose() {
         return state == GAME_LOSE;
     }
-    boolean isPause() {
+    public boolean isPause() {
         return state == GAME_PAUSE;
     }
 
-    Block[][] getBlocks() {
+    public Block[][] getBlocks() {
         return blocks;
     }
 
-    ArrayList<Point> getLinkPath() {
+    public ArrayList<Point> getLinkPath() {
         return linkPath;
     }
 
-    ArrayList<Point> getHintPoints() {
+    public ArrayList<Point> getHintPoints() {
         return hintPoints;
     }
 
-    void selectBlock(int row, int col) {
+    public void selectBlock(int row, int col) {
         if (blocks[row][col].isUnselected()) {
             blocks[row][col].state = Block.STATE_IMAGE_SELECTED;
             if (selectedRow == -1) {
@@ -125,75 +115,57 @@ class GameState {
                     selectedCol = col;
                 }
             }
-            onBlockClick();
-            onStateChange();
+            Log.d(LOG_TAG, "before send redraw event");
+            eventBus.post(GameEvent.createEvent(GameEvent.GAME_BLOCK_CLICK));
+            eventBus.post(GameEvent.createEvent(GameEvent.GAME_REDARW));
+            Log.d(LOG_TAG, "after send redraw event");
         } else if (blocks[row][col].state == Block.STATE_IMAGE_SELECTED) {
             blocks[row][col].state = Block.STATE_IMAGE_UNSELECTED;
             selectedRow = -1;
             selectedCol = -1;
-            onBlockClick();
-            onStateChange();
-        }
-    }
-
-    private void onBlockClick() {
-        if (mListener != null) {
-            mListener.onBlockClick();
-        }
-    }
-
-    private void onBlockPairErase() {
-        if (mListener != null) {
-            mListener.onBlockPairErase();
-        }
-    }
-
-    private void onStateChange() {
-        if (mListener != null) {
-            mListener.onStateChange(this);
+            eventBus.post(GameEvent.createEvent(GameEvent.GAME_BLOCK_CLICK));
+            eventBus.post(GameEvent.createEvent(GameEvent.GAME_REDARW));
         }
     }
 
     private void setSuccess() {
         state = GAME_SUCCESS;
         stopTimer();
-        if (mListener != null) {
-            mListener.onWin(this, (double)leftTimeInSec / totalTimeInSec);
-        }
+        eventBus.post(GameEvent.createWinEvent((double) leftTimeInSec / totalTimeInSec));
+        eventBus.post(GameEvent.createEvent(GameEvent.GAME_REDARW));
     }
 
     private void setLose() {
         state = GAME_LOSE;
         stopTimer();
-        if (mListener != null) {
-            mListener.onLose(this);
-        }
+        eventBus.post(GameEvent.createEvent(GameEvent.GAME_LOSE));
+        eventBus.post(GameEvent.createEvent(GameEvent.GAME_REDARW));
     }
 
-    void pause() {
+    public void pause() {
         state = GAME_PAUSE;
         stopTimer();
-        onStateChange();
+        eventBus.post(GameEvent.createEvent(GameEvent.GAME_REDARW));
     }
 
-    void resumeFromPause() {
+    public void resumeFromPause() {
         state = GAME_RUN;
         startTimer();
-        onStateChange();
+        eventBus.post(GameEvent.createEvent(GameEvent.GAME_REDARW));
     }
 
-    float getLeftTimePercent() {
+    public float getLeftTimePercent() {
         return (float)leftTimeInSec / totalTimeInSec;
     }
 
-    void giveHint() {
+    public void giveHint() {
         if (hintPoints == null) {
             ArrayList<Point> path = new ArrayList<>();
             if (GameLogic.haveErasablePair(blocks, path)) {
                 hintPoints = new ArrayList<>();
                 hintPoints.add(path.get(0));
                 hintPoints.add(path.get(path.size() - 1));
-                onStateChange();
+                eventBus.post(GameEvent.createEvent(GameEvent.GAME_REDARW));
             }
         }
     }
@@ -209,14 +181,14 @@ class GameState {
                 if (linkPath != null) {
                     blocks[linkPath.get(0).row][linkPath.get(0).col] = Block.EMPTY;
                     blocks[linkPath.get(linkPath.size()-1).row][linkPath.get(linkPath.size()-1).col] = Block.EMPTY;
-                    onBlockPairErase();
+                    eventBus.post(GameEvent.createEvent(GameEvent.GAME_BLOCK_PAIR_ERASE));
                     linkPath = null;
                     if (GameLogic.isSuccess(blocks)) {
                         setSuccess();
                     } else {
                         checkAndShuffleBlocks();
                     }
-                    onStateChange();
+                    eventBus.post(GameEvent.createEvent(GameEvent.GAME_REDARW));
                 }
             } else if (msg.what == MSG_UPDATE_TIME) {
                 if (leftTimeInSec == 0) {
@@ -224,7 +196,7 @@ class GameState {
                 } else {
                     leftTimeInSec--;
                 }
-                onStateChange();
+                eventBus.post(GameEvent.createEvent(GameEvent.GAME_REDARW));
             }
         }
     }
