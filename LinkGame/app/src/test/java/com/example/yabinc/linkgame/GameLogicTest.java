@@ -73,4 +73,30 @@ public class GameLogicTest {
         path.clear();
         assertTrue(GameLogic.canErase(5, 3, 0, 3, blocks, path));
     }
+
+    @Test
+    public void testCanErase4() {
+        String map = "txxx" +
+                "bxxx" +
+                "xxxx" +
+                "bbxx" +
+                "xxxx" +
+                "txxx";
+        Block[][] blocks = fillBlocks(6, 4, map);
+        ArrayList<Point> path = new ArrayList<>();
+        assertTrue(GameLogic.canErase(0, 0, 5, 0, blocks, path));
+        assertEquals(path.size(), 4);
+        int[][] expected = new int[][] {
+                {0, 0}, {0, -1}, {5, -1}, {5, 0}
+        };
+        for (int i = 0; i < 4; ++i) {
+            System.out.printf("%d, %d\n", path.get(i).row, path.get(i).col);
+        }
+        for (int i = 0; i < 4; ++i) {
+            assertEquals(path.get(i).row, expected[i][0]);
+            assertEquals(path.get(i).col, expected[i][1]);
+        }
+        path.clear();
+        assertTrue(GameLogic.canErase(5, 0, 0, 0, blocks, path));
+    }
 }

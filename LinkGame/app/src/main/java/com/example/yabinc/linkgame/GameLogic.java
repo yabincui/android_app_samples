@@ -1,10 +1,9 @@
 package com.example.yabinc.linkgame;
 
-import android.util.Log;
-
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Queue;
 import java.util.Random;
 
@@ -100,9 +99,18 @@ public class GameLogic {
     private static boolean searchPath(int srcR, int srcC, Condition condition,
                                       Block[][] blocks, ArrayList<Point> path) {
         ArrayList<Point> path2 = new ArrayList<Point>();
+        ArrayList<Point> path3 = new ArrayList<>();
         boolean result = searchPathByDFS(srcR, srcC, condition, blocks, path2);
-        boolean resultDp = searchPathByDP(srcR, srcC, condition, blocks, path);
-        assert result == resultDp;
+        boolean resultDp = searchPathByDP(srcR, srcC, condition, blocks, path3);
+        boolean resultDp2 = searchPathByDp2(srcR, srcC, condition, blocks, path);
+        if (BuildConfig.DEBUG) {
+            if (result != resultDp) {
+                throw new AssertionError();
+            }
+            if (result != resultDp2) {
+                throw new AssertionError();
+            }
+        }
         return result;
     }
 
@@ -171,7 +179,6 @@ public class GameLogic {
 
     private static boolean searchPathByDP(int srcR, int srcC, Condition condition,
                                           Block[][] blocks, ArrayList<Point> path) {
-        assert path.isEmpty();
         int rows = blocks.length;
         int cols = blocks[0].length;
         Mark[][] mark = new Mark[rows + 2][cols + 2];
@@ -254,10 +261,100 @@ public class GameLogic {
                 path.add(new Point(lastR, lastC));
             }
             Collections.reverse(path);
-        } else {
-            assert path.isEmpty();
         }
         return found;
+    }
+
+    private static class Mark2 {
+        int r;
+        int c;
+        int depth;
+        int direction;
+        Mark2 prev;
+
+        Mark2(int r, int c, int depth, int direction, Mark2 prev) {
+            this.r = r;
+            this.c = c;
+            this.depth = depth;
+            this.direction = direction;
+            this.prev = prev;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (!(obj instanceof Mark2)) {
+                return false;
+            }
+            Mark2 other = (Mark2)obj;
+            return (r == other.r && c == other.c && depth == other.depth &&
+                    direction == other.direction);
+        }
+
+        @Override
+        public int hashCode() {
+            return (r << 24) | (c << 16) | (depth << 8) | direction;
+        }
+    }
+
+    // O(M*N)
+    private static boolean searchPathByDp2(int srcR, int srcC, Condition condition,
+                                           Block[][] blocks, ArrayList<Point> path) {
+        int rows = blocks.length;
+        int cols = blocks[0].length;
+        HashSet<Mark2> visited = new HashSet<Mark2>();
+        Queue<Mark2> queue = new ArrayDeque<>();
+        for (int dir = 0; dir < 4; ++dir) {
+            Mark2 mark = new Mark2(srcR, srcC, 0, dir, null);
+            queue.add(mark);
+            visited.add(mark);
+        }
+        Mark2 lastMark = null;
+        while (!queue.isEmpty() && lastMark == null) {
+            Mark2 mark = queue.poll();
+            for (int dir = 0; dir < 4; ++dir) {
+                int nr = mark.r + dr[dir];
+                int nc = mark.c + dc[dir];
+                if (nr < -1 || nr > rows || nc < -1 || nc > cols) {
+                    continue;
+                }
+                int ndepth = (dir == mark.direction) ? mark.depth : (mark.depth + 1);
+                if (ndepth > 2) {
+                    continue;
+                }
+                Mark2 nmark = new Mark2(nr, nc, ndepth, dir, mark);
+                if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
+                    if (condition.fulfill(nr, nc, blocks[nr][nc])) {
+                        lastMark = nmark;
+                        break;
+                    } else if (!blocks[nr][nc].isEmpty()) {
+                        continue;
+                    }
+                }
+                if (visited.contains(nmark)) {
+                    continue;
+                }
+                visited.add(nmark);
+                queue.add(nmark);
+            }
+        }
+        if (lastMark == null) {
+            return false;
+        }
+        while (lastMark.prev != null) {
+            int lastR = lastMark.r;
+            int lastC = lastMark.c;
+            int lastDepth = lastMark.depth;
+            path.add(new Point(lastR, lastC));
+            while (lastMark.depth == lastDepth && lastMark.prev != null) {
+                lastMark = lastMark.prev;
+            }
+        }
+        path.add(new Point(srcR, srcC));
+        Collections.reverse(path);
+        return true;
     }
 
     static class ImgIndexCondition implements Condition {

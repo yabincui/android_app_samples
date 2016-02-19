@@ -4,9 +4,11 @@ TODO List:
 3. Use breadth-first search for path searching. (done)
 4. Add score system, store the game play situation. (done)
 5. Refactor event passing mechanism, using a broadcast method. (done)
-
-6. Add function to split a graph file into linkable icons. Add library to test if icons are distinguishable.
-6.1 add a simple image similarity method.
+7. Use O(M*N) breadth-first search for path searching. (done)
+8. Adjust game window to the middle of the screen.
+8. Add function to connect with the server for login, recording score, and download images.
+9. Add function to split a graph file into linkable icons. Add library to test if icons are distinguishable.
+9.1 add a simple image similarity method.
 http://www.lac.inpe.br/JIPCookbook/6050-howto-compareimages.jsp#howtohowdoicomparetwoimagestoseeiftheyareequalaverysimplealgorithmtocompareimagesforipossibleisimilaritywithoutconsideringthehighlevelcontents
 
-7. Add startup flash to show how to play.
+10. Add startup flash to show how to play.
