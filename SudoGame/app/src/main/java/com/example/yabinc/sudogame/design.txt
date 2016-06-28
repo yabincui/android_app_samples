@@ -1,0 +1,11 @@
+SudoGame, implemented with JNI
+1. Add custom view to draw a 9 * 9 grid.
+2. Add jni function to initialize started numbers.
+3. Add function to press a block and set its number.
+4. Add jni function to check success and conflict situations.
+5. Print success logo if success.
+
+Use Model-View-Controler pattern:
+Model manages the data, logic and rules of the application.
+A view can be any output representation of information.
+The controller accepts input and converts it to commands for the model or view.
