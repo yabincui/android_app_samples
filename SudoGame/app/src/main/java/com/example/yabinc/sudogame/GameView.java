@@ -43,17 +43,21 @@ public class GameView extends View {
         mLinePaint.setStyle(Paint.Style.STROKE);
         mLinePaint.setColor(Color.BLACK);
         mLinePaint.setStrokeWidth(10);
+
         mFixedDigitPaint = new Paint();
         mFixedDigitPaint.setStyle(Paint.Style.FILL);
         mFixedDigitPaint.setColor(Color.BLACK);
-        mFixedDigitPaint.setTextSize(100);
         mFixedDigitPaint.setTextAlign(Paint.Align.CENTER);
-        mGuessDigitPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+        mGuessDigitPaint = new Paint();
+        mGuessDigitPaint.setStyle(Paint.Style.FILL);
         mGuessDigitPaint.setColor(Color.GREEN);
-        mGuessDigitPaint.setStrokeWidth(50);
-        mWrongGuessDigitPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mGuessDigitPaint.setTextAlign(Paint.Align.CENTER);
+
+        mWrongGuessDigitPaint = new Paint();
+        mWrongGuessDigitPaint.setStyle(Paint.Style.FILL);
         mWrongGuessDigitPaint.setColor(Color.RED);
-        mWrongGuessDigitPaint.setStrokeWidth(50);
+        mWrongGuessDigitPaint.setTextAlign(Paint.Align.CENTER);
     }
 
     @Override
@@ -74,6 +78,8 @@ public class GameView extends View {
         Log.d(TAG, "blockRegionRect = " + mViewInfo.blockRegionRect);
         Log.d(TAG, "blockWidth = " + mViewInfo.blockWidth + ", blockHeight = " + mViewInfo.blockHeight);
         mFixedDigitPaint.setTextSize(mViewInfo.blockWidth);
+        mGuessDigitPaint.setTextSize(mViewInfo.blockWidth);
+        mWrongGuessDigitPaint.setTextSize(mViewInfo.blockWidth);
     }
 
     @Override
