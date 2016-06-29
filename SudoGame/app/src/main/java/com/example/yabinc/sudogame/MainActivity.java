@@ -2,24 +2,40 @@ package com.example.yabinc.sudogame;
 
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.widget.TextView;
 
 public class MainActivity extends AppCompatActivity {
 
-    private GameModel gameModel;
-    private GameView gameView;
+    private GameModel mGameModel;
+    private GameView mGameView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        gameView = (GameView) findViewById(R.id.gameView);
-        gameModel = new GameModel();
-        gameView.init(gameModel);
+        mGameView = (GameView) findViewById(R.id.gameView);
+        mGameModel = new GameModel();
+        mGameView.init(mGameModel);
     }
 
-    static {
-        System.loadLibrary("sudo-game-jni");
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+        return true;
     }
-    public native String getMsgFromJni();
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+
+        switch (item.getItemId()) {
+            case R.id.action_hint:
+                mGameView.hint();
+                break;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+        return true;
+    }
 }
