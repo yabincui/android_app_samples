@@ -10,11 +10,14 @@ public class GameModel {
     static final int BOARD_ROWS = 9;
     static final int BOARD_COLS = 9;
 
+    private static final int GAME_BEFORE_START = 0;
     private static final int GAME_RUN = 1;
     private static final int GAME_SUCCESS = 2;
     private static final int GAME_LOSE = 3;
 
     private int mState;
+    private int mFixCount;
+    private boolean mReasonable;
 
     class BlockState {
         int digit;
@@ -33,10 +36,9 @@ public class GameModel {
     private int[][] mIntBoard;  // mIntBoard is a representation of board used to communicate with jni code.
 
     GameModel() {
-        init();
-    }
-
-    private void init() {
+        mState = GAME_BEFORE_START;
+        mFixCount = 40;
+        mReasonable = true;
         mBoard = new BlockState[BOARD_ROWS][BOARD_COLS];
         for (int r = 0; r < BOARD_ROWS; ++r) {
             for (int c = 0; c < BOARD_COLS; ++c) {
@@ -47,10 +49,24 @@ public class GameModel {
     }
 
     public void reInit() {
-        Log.d(TAG, "randomInitState(40, false) = " + randomInitState(20, true));
+        Log.d(TAG, "randomInitState(" + mFixCount + ", " + mReasonable + ") = " + randomInitState(mFixCount, mReasonable));
         Log.d(TAG, "canFindSolution = " + canFindSolution(getIntBoard()));
         updateConflictMarks();
         mState = GAME_RUN;
+    }
+
+    public void clearGuess() {
+        for (int r = 0; r < BOARD_ROWS; ++r) {
+            for (int c = 0; c < BOARD_COLS; ++c) {
+                if (mBoard[r][c].isFilled) {
+                    if (!mBoard[r][c].isFixed) {
+                        mBoard[r][c].digit = 0;
+                        mBoard[r][c].isFilled = false;
+                    }
+                    mBoard[r][c].isConflictWithOthers = false;
+                }
+            }
+        }
     }
 
     // row is in [0, BOARD_ROWS), col is in [0, BOARD_COLS).
@@ -62,6 +78,9 @@ public class GameModel {
     }
 
     void guessBlockDigit(int row, int col, int digit) {
+        if (mBoard[row][col].isFixed) {
+            return;
+        }
         mBoard[row][col].isFilled = (digit == 0 ? false : true);
         mBoard[row][col].digit = digit;
         updateConflictMarks();
@@ -144,6 +163,22 @@ public class GameModel {
 
     public int[] getOneReasonablePosition() {
         return getOneReasonablePosition(getIntBoard());
+    }
+
+    public int getFixCount() {
+        return mFixCount;
+    }
+
+    public void setFixCount(int fixCount) {
+        mFixCount = fixCount;
+    }
+
+    public boolean getReasonable() {
+        return mReasonable;
+    }
+
+    public void setReasonable(boolean reasonable) {
+        mReasonable = reasonable;
     }
 
     private native int[][] initRandomBoard(int fixedCount, boolean isSolutionReasonable);

@@ -2,6 +2,12 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
+    <item android:id="@+id/action_start_new" android:title="Start New"
+        android:orderInCategory="100" app:showAsAction="never" />
+    <item android:id="@+id/action_restart" android:title="Restart"
+        android:orderInCategory="100" app:showAsAction="never" />
+    <item android:id="@+id/action_select_fixcount_and_reasonable" android:title="SelectFixCount"
+        android:orderInCategory="100" app:showAsAction="never" />
     <item android:id="@+id/action_hint" android:title="Hint"
         android:orderInCategory="100" app:showAsAction="never" />
 

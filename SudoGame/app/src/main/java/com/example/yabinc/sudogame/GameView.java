@@ -269,6 +269,20 @@ public class GameView extends View {
         }
     }
 
+    public void startNewGame() {
+        mGameModel.reInit();
+        mSelectedBlock = null;
+        mHintBlock = null;
+        invalidate();
+    }
+
+    public void restartCurrentGame() {
+        mGameModel.clearGuess();
+        mSelectedBlock = null;
+        mHintBlock = null;
+        invalidate();
+    }
+
     public void hint() {
         int[] pos = mGameModel.getOneReasonablePosition();
         if (pos == null) {
