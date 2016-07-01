@@ -10,5 +10,7 @@
         android:orderInCategory="100" app:showAsAction="never" />
     <item android:id="@+id/action_hint" android:title="Hint"
         android:orderInCategory="100" app:showAsAction="never" />
+    <item android:id="@+id/action_mark_fix" android:title="Mark Fix"
+        android:orderInCategory="100" app:showAsAction="never" />
 
 </menu>

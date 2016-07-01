@@ -23,12 +23,14 @@ public class GameModel {
         int digit;
         boolean isFilled;
         boolean isFixed;
+        boolean isUserInput;
         boolean isConflictWithOthers;
 
         BlockState() {
             digit = 0;
             isFilled = false;
             isFixed = false;
+            isUserInput = false;
             isConflictWithOthers = false;
         }
     }
@@ -37,8 +39,8 @@ public class GameModel {
 
     GameModel() {
         mState = GAME_BEFORE_START;
-        mFixCount = 40;
-        mReasonable = true;
+        mFixCount = 30;
+        mReasonable = false;
         mBoard = new BlockState[BOARD_ROWS][BOARD_COLS];
         for (int r = 0; r < BOARD_ROWS; ++r) {
             for (int c = 0; c < BOARD_COLS; ++c) {
@@ -82,6 +84,7 @@ public class GameModel {
             return;
         }
         mBoard[row][col].isFilled = (digit == 0 ? false : true);
+        mBoard[row][col].isUserInput = (digit == 0 ? false : true);
         mBoard[row][col].digit = digit;
         updateConflictMarks();
         checkSuccess();
@@ -123,6 +126,7 @@ public class GameModel {
                 mIntBoard[i][j] = (mBoard[i][j].isFixed ? mBoard[i][j].digit : -mBoard[i][j].digit);
             }
         }
+        Log.d(TAG, "mIntBoard[0][1] = " + mIntBoard[0][1]);
         return mIntBoard;
     }
 
@@ -179,6 +183,18 @@ public class GameModel {
 
     public void setReasonable(boolean reasonable) {
         mReasonable = reasonable;
+    }
+
+    public void markFix() {
+        for (int r = 0; r < BOARD_ROWS; ++r) {
+            for (int c = 0; c < BOARD_COLS; ++c) {
+                if (mBoard[r][c].isUserInput && mBoard[r][c].isFilled) {
+                    if (!mBoard[r][c].isConflictWithOthers) {
+                        mBoard[r][c].isFixed = true;
+                    }
+                }
+            }
+        }
     }
 
     private native int[][] initRandomBoard(int fixedCount, boolean isSolutionReasonable);

@@ -45,6 +45,8 @@ public class MainActivity extends AppCompatActivity implements SelectFixCountAnd
             case R.id.action_hint:
                 mGameView.hint();
                 break;
+            case R.id.action_mark_fix:
+                mGameView.markFix();
             default:
                 return super.onOptionsItemSelected(item);
         }

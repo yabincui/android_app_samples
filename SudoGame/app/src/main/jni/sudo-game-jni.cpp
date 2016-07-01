@@ -38,11 +38,12 @@ static bool getBoardFromObjectArray(JNIEnv* env, jobjectArray objArray, Board& b
         }
         jint* values = env->GetIntArrayElements((jintArray)obj, NULL);
         for (int j = 0; j < BOARD_COLS; ++j) {
+            LOGI("getBoard %d, %d = %d", i, j, values[j]);
             int c = values[j];
             if (c < -9 || c > 9) {
                 return false;
             }
-            board.digits[i][j] = (c > 0 ? -c : c);
+            board.digits[i][j] = (c < 0 ? -c : c);
             board.fixed[i][j] = (c < 0);
         }
         env->ReleaseIntArrayElements((jintArray)obj, values, 0);
@@ -102,6 +103,7 @@ static bool checkValid(const Board& board, int curR, int curC) {
             continue;
         }
         if (board.digits[r][curC] == digit) {
+            LOGI("conflict (%d, %d) (%d, %d)", curR, curC, r, curC);
             return false;
         }
     }
@@ -110,6 +112,7 @@ static bool checkValid(const Board& board, int curR, int curC) {
             continue;
         }
         if (board.digits[curR][c] == digit) {
+            LOGI("conflict (%d, %d) (%d, %d)", curR, curC, curR, c);
             return false;
         }
     }
@@ -121,6 +124,7 @@ static bool checkValid(const Board& board, int curR, int curC) {
                 continue;
             }
             if (board.digits[r][c] == digit) {
+                LOGI("conflict (%d, %d) (%d, %d)", curR, curC, r, c);
                 return false;
             }
         }
@@ -138,12 +142,16 @@ static bool canFindSolution_r(Board& board, int curR, int curC) {
         }
         if (board.digits[curR][curC] == 0) {
             for (int guess = 1; guess <= 9; ++guess) {
+                //LOGI("guess board.digits[%d][%d] = %d", curR, curC, guess);
                 board.digits[curR][curC] = guess;
                 if (checkValid(board, curR, curC)) {
+                    //LOGI("t1");
                     if (canFindSolution_r(board, nextR, nextC)) {
+                        //LOGI("t2");
                         return true;
                     }
                 }
+                //LOGI("t3");
             }
             board.digits[curR][curC] = 0;
             return false;
@@ -166,9 +174,12 @@ static bool canFindSolution(Board& board) {
             }
         }
     }
-    return canFindSolution_r(board, 0, 0);
+    bool ret = canFindSolution_r(board, 0, 0);
+    LOGI("ret = %d", ret);
+    return ret;
 }
 
+/*
 static void randomBoard(Board& board, int fixedCount) {
     for (int r = 0; r < BOARD_ROWS; ++r) {
         for (int c = 0; c < BOARD_COLS; ++c) {
@@ -194,18 +205,173 @@ static void randomBoard(Board& board, int fixedCount) {
         fixedCount--;
     }
 }
+*/
 
-static bool isPointReasonable(Board& board, int curR, int curC) {
-    int possibleCount = 0;
-    int oldDigit = board.digits[curR][curC];
-    for (int digit = 1; digit <= 9; ++digit) {
-        board.digits[curR][curC]  = digit;
-        if (checkValid(board, curR, curC)) {
-            possibleCount++;
+static bool randomBlock_r(Board& board, int r, int c, int endR, int endC, int used_mask) {
+    if (r == endR) {
+        return true;
+    }
+    int nr = r;
+    int nc = c + 1;
+    if (nc == endC) {
+        nr++;
+        nc -= 3;
+    }
+    int tried_mask = 0;
+    while (tried_mask != 0x1ff) {
+        int i = rand() % 9;
+        tried_mask |= 1 << i;
+        if ((used_mask & (1 << i)) == 0) {
+            used_mask |= 1 << i;
+            board.digits[r][c] = i + 1;
+            if (checkValid(board, r, c) && randomBlock_r(board, nr, nc, endR, endC, used_mask)) {
+                return true;
+            }
+            used_mask &= ~(1 << i);
+            board.digits[r][c] = 0;
         }
     }
-    board.digits[curR][curC] = oldDigit;
-    return (possibleCount == 1);
+    return false;
+}
+
+static bool randomBlock(Board& board, int startR, int startC) {
+    return randomBlock_r(board, startR, startC, startR + 3, startC + 3, 0);
+}
+
+static bool randomBoard(Board& board) {
+    for (int r = 0; r < BOARD_ROWS; ++r) {
+        for (int c = 0; c < BOARD_COLS; ++c) {
+            board.digits[r][c] = 0;
+            board.fixed[r][c] = false;
+        }
+    }
+    LOGI("random in the middle middle");
+    // Random the board in the middle.
+    if (!randomBlock(board, 3, 3)) {
+        LOGI("fail in 3 3");
+        return false;
+    }
+    if (!randomBlock(board, 3, 0)) {
+        LOGI("fail in 3 0");
+        return false;
+    }
+    if (!randomBlock(board, 3, 6)) {
+        LOGI("fail in 3 6");
+        return false;
+    }
+    if (!randomBlock(board, 0, 3)) {
+        LOGI("fail in 0 3");
+        return false;
+    }
+
+    if (!randomBlock(board, 0, 0)) {
+        LOGI("fail in 0 0");
+        return false;
+    }
+
+    if (!randomBlock(board, 0, 6)) {
+        LOGI("fail in 0 6");
+        return false;
+    }
+
+    /*
+    if (!randomBlock(board, 6, 3)) {
+        LOGI("fail in 6 3");
+        return false;
+    }
+     */
+    for (int r = 0; r < BOARD_ROWS; ++r) {
+        for (int c = 0; c < BOARD_COLS; ++c) {
+            LOGI("board[%d][%d] = %d", r, c, board.digits[r][c]);
+        }
+    }
+
+    return true;
+}
+
+static void markFixedBlocks(Board& board, int fixedCount) {
+    for (int r = 0; r < BOARD_ROWS; ++r) {
+        for (int c = 0; c < BOARD_COLS; ++c) {
+            board.fixed[r][c] = false;
+        }
+    }
+    fixedCount = std::min(fixedCount, BOARD_ROWS * BOARD_COLS);
+    while (fixedCount > 0) {
+        int r = rand() % BOARD_ROWS;
+        int c = rand() % BOARD_COLS;
+        if (board.fixed[r][c]) {
+            continue;
+        }
+        board.fixed[r][c] = true;
+        fixedCount--;
+    }
+}
+
+static bool isPointReasonable(Board& board, int curR, int curC) {
+    int oldDigit = board.digits[curR][curC];
+    // try to see if any digit is fixed at this point.
+    for (int digit = 1; digit <= 9; ++digit) {
+        board.digits[curR][curC] = digit;
+        if (!checkValid(board, curR, curC)) {
+            board.digits[curR][curC] = 0;
+            continue;
+        }
+        board.digits[curR][curC] = 0;
+        LOGI("board[%d][%d] = %d, checkValid", curR, curC, board.digits[curR][curC]);
+        // make sure this digit can't be at other points.
+        bool single = true;
+        for (int r = 0; r < BOARD_ROWS && single; ++r) {
+            if (board.digits[r][curC] != 0 || r == curR) {
+                continue;
+            }
+            board.digits[r][curC] = digit;
+            if (checkValid(board, r, curC)) {
+                single = false;
+            }
+            board.digits[r][curC] = 0;
+        }
+        if (single) {
+            LOGI("isReasonable(%d, %d, %d) true in row", curR, curC, digit);
+            return true;
+        }
+        single = true;
+        for (int c = 0; c < BOARD_COLS && single; ++c) {
+            //LOGI("board.digits[%d][%d] = %d", curR, c, board.digits[curR][c]);
+            if (board.digits[curR][c] != 0 || c == curC) {
+                continue;
+            }
+            board.digits[curR][c] = digit;
+            //LOGI("checkValid %d, %d", curR, c);
+            if (checkValid(board, curR, c)) {
+                single = false;
+            }
+            board.digits[curR][c] = 0;
+        }
+        if (single) {
+            LOGI("isReasonable(%d, %d, %d) true in col", curR, curC, digit);
+            return true;
+        }
+        int startR = curR / 3 * 3;
+        int startC = curC / 3 * 3;
+        single = true;
+        for (int r = startR; r < startR + 3 && single; ++r) {
+            for (int c = startC; c < startC + 3 && single; ++c) {
+                if (board.digits[r][c] != 0 || (r == curR && c == curC)) {
+                    continue;
+                }
+                board.digits[r][c] = digit;
+                if (checkValid(board, r, c)) {
+                    single = false;
+                }
+                board.digits[r][c] = 0;
+            }
+        }
+        if (single) {
+            LOGI("isReasonable(%d, %d, %d) true in block", curR, curC, digit);
+            return true;
+        }
+    }
+    return false;
 }
 
 static void makeBoardReasonable(Board& nativeBoard) {
@@ -230,7 +396,6 @@ static void makeBoardReasonable(Board& nativeBoard) {
                 continue;
             }
             if (isPointReasonable(experimentBoard, selR, selC)) {
-                LOGI("point %d, %d is reasonable", selR, selC);
                 experimentBoard.digits[selR][selC] = 0;
                 experimentBoard.fixed[selR][selC] = false;
                 leftRemoveCount++;
@@ -260,9 +425,15 @@ extern "C" JNIEXPORT jobjectArray JNICALL Java_com_example_yabinc_sudogame_GameM
     LOGI("call initRandomBoard");
     for (int tries = 0; tries < 1000; ++tries) {
         LOGI("randomBoard, tries = %d", tries);
-        randomBoard(nativeBoard, fixedCount);
+        //randomBoard(nativeBoard, 35);
+        //randomBoard(nativeBoard, fixedCount);
+        if (!randomBoard(nativeBoard)) {
+            LOGI("failed to randomBoard");
+            continue;
+        }
         LOGI("canFindSolution, tries = %d", tries);
         if (canFindSolution(nativeBoard)) {
+            markFixedBlocks(nativeBoard, fixedCount);
             LOGI("success");
             if (isSolutionReasonable) {
                 makeBoardReasonable(nativeBoard);

@@ -38,6 +38,7 @@ public class GameView extends View {
     private Paint mSelectedLinePaint;
     private Paint mHintLinePaint;
     private Paint mFixedDigitPaint;
+    private Paint mUserFixedDigitPaint;
     private Paint mGuessDigitPaint;
     private Paint mWrongGuessDigitPaint;
     private Paint mDigitSelectPaint;
@@ -76,8 +77,13 @@ public class GameView extends View {
 
         mFixedDigitPaint = new Paint();
         mFixedDigitPaint.setStyle(Paint.Style.FILL);
-        mFixedDigitPaint.setColor(Color.BLACK);
+        mFixedDigitPaint.setColor(Color.GRAY);
         mFixedDigitPaint.setTextAlign(Paint.Align.CENTER);
+
+        mUserFixedDigitPaint = new Paint();
+        mUserFixedDigitPaint.setStyle(Paint.Style.FILL);
+        mUserFixedDigitPaint.setColor(Color.BLACK);
+        mUserFixedDigitPaint.setTextAlign(Paint.Align.CENTER);
 
         mGuessDigitPaint = new Paint();
         mGuessDigitPaint.setStyle(Paint.Style.FILL);
@@ -100,13 +106,18 @@ public class GameView extends View {
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
-        mViewInfo.globalRect = new Rect(0, 0, w, h);
+        mViewInfo.globalRect = new Rect((int)(0.05 * w), (int)(0.05 * h), (int)(0.95 * w), (int)(0.95 * h));
         if (w > h) {
-            mViewInfo.blockRegionRect = new Rect(0, 0, (int)(w * 0.75), h);
-            mViewInfo.digitRegionRect = new Rect(mViewInfo.blockRegionRect.right, 0, w, h);
+            mViewInfo.blockRegionRect = new Rect(mViewInfo.globalRect.left, mViewInfo.globalRect.top,
+                    (int)(mViewInfo.globalRect.left + mViewInfo.globalRect.width() * 0.75),
+                    mViewInfo.globalRect.bottom);
+            mViewInfo.digitRegionRect = new Rect(mViewInfo.blockRegionRect.right, mViewInfo.globalRect.top,
+                    mViewInfo.globalRect.right, mViewInfo.globalRect.bottom);
         } else {
-            mViewInfo.blockRegionRect = new Rect(0, 0, w, (int)(h * 0.75));
-            mViewInfo.digitRegionRect = new Rect(0, mViewInfo.blockRegionRect.bottom, w, h);
+            mViewInfo.blockRegionRect = new Rect(mViewInfo.globalRect.left, mViewInfo.globalRect.top,
+                    mViewInfo.globalRect.right, (int)(mViewInfo.globalRect.top + mViewInfo.globalRect.height() * 0.75));
+            mViewInfo.digitRegionRect = new Rect(mViewInfo.globalRect.left, mViewInfo.blockRegionRect.bottom,
+                    mViewInfo.globalRect.right, mViewInfo.globalRect.bottom);
         }
         int blockBorder = Math.min(mViewInfo.blockRegionRect.width(), mViewInfo.blockRegionRect.height());
         int blockRegionLeft = mViewInfo.blockRegionRect.left +
@@ -121,6 +132,7 @@ public class GameView extends View {
         Log.d(TAG, "blockRegionRect = " + mViewInfo.blockRegionRect);
         Log.d(TAG, "blockWidth = " + mViewInfo.blockWidth + ", blockHeight = " + mViewInfo.blockHeight);
         mFixedDigitPaint.setTextSize(mViewInfo.blockWidth);
+        mUserFixedDigitPaint.setTextSize(mViewInfo.blockWidth);
         mGuessDigitPaint.setTextSize(mViewInfo.blockWidth);
         mWrongGuessDigitPaint.setTextSize(mViewInfo.blockWidth);
 
@@ -181,7 +193,11 @@ public class GameView extends View {
                 text[0] = (char) ('0' + block.digit);
                 if (block.isFilled) {
                     if (block.isFixed) {
-                        canvas.drawText(text, 0, 1, x, y, mFixedDigitPaint);
+                        if (block.isUserInput) {
+                            canvas.drawText(text, 0, 1, x, y, mUserFixedDigitPaint);
+                        } else {
+                            canvas.drawText(text, 0, 1, x, y, mFixedDigitPaint);
+                        }
                     } else if (block.isConflictWithOthers) {
                         canvas.drawText(text, 0, 1, x, y, mWrongGuessDigitPaint);
                     } else {
@@ -240,14 +256,19 @@ public class GameView extends View {
     }
 
     private void tapPos(float x, float y) {
+        mHintBlock = null;
         if (mGameModel.isRun()) {
             if (x >= mViewInfo.blockRegionRect.left && x <= mViewInfo.blockRegionRect.right &&
                     y >= mViewInfo.blockRegionRect.top && y <= mViewInfo.blockRegionRect.bottom) {
                 int selRow = (int) ((y - mViewInfo.blockRegionRect.top) / mViewInfo.blockHeight);
                 int selCol = (int) ((x - mViewInfo.blockRegionRect.left) / mViewInfo.blockWidth);
+                Log.d(TAG, "selRow = " + selRow + ", selCol = " + selCol);
+                if (selRow < 0 || selRow >= mGameModel.BOARD_ROWS || selCol < 0 ||
+                        selCol >= mGameModel.BOARD_COLS) {
+                    return;
+                }
                 if (mGameModel.getBlockState(selRow, selCol).isFixed == false) {
-                    if (mSelectedBlock != null && mSelectedBlock.x == selCol && mSelectedBlock.y == selRow &&
-                            mGameModel.getBlockState(selRow, selCol).isConflictWithOthers == true) {
+                    if (mSelectedBlock != null && mSelectedBlock.x == selCol && mSelectedBlock.y == selRow) {
                         mGameModel.guessBlockDigit(selRow, selCol, 0);
                     }
                     mSelectedBlock = new Point(selCol, selRow);
@@ -257,6 +278,9 @@ public class GameView extends View {
                     y >= mViewInfo.digitRegionRect.top && y <= mViewInfo.digitRegionRect.bottom) {
                 int selRow = (int) ((y - mViewInfo.digitRegionRect.top) / mViewInfo.digitHeight);
                 int selCol = (int) ((x - mViewInfo.digitRegionRect.left) / mViewInfo.digitWidth);
+                if (selRow < 0 || selRow >= 3 || selCol < 0 || selCol >= 3) {
+                    return;
+                }
                 int digit = selRow * 3 + selCol + 1;
                 if (mSelectedBlock != null) {
                     mGameModel.guessBlockDigit(mSelectedBlock.y, mSelectedBlock.x, digit);
@@ -292,5 +316,10 @@ public class GameView extends View {
             mHintBlock = new Point(pos[1], pos[0]);
             invalidate();
         }
+    }
+
+    public void markFix() {
+        mGameModel.markFix();
+        invalidate();
     }
 }
