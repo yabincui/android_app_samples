@@ -191,7 +191,7 @@ public class GameView extends View {
                 float y = mViewInfo.blockRegionRect.top + r * mViewInfo.blockHeight + mViewInfo.blockHeight - hBorder;
                 GameModel.BlockState block = mGameModel.getBlockState(r, c);
                 text[0] = (char) ('0' + block.digit);
-                if (block.isFilled) {
+                if (block.digit != 0) {
                     if (block.isFixed) {
                         if (block.isUserInput) {
                             canvas.drawText(text, 0, 1, x, y, mUserFixedDigitPaint);

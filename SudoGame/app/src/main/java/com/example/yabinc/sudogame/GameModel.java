@@ -21,17 +21,55 @@ public class GameModel {
 
     class BlockState {
         int digit;
-        boolean isFilled;
         boolean isFixed;
         boolean isUserInput;
         boolean isConflictWithOthers;
 
         BlockState() {
             digit = 0;
-            isFilled = false;
             isFixed = false;
             isUserInput = false;
             isConflictWithOthers = false;
+        }
+
+        void guess(int digit) {
+            if (!isFixed) {
+                if (digit == 0) {
+                    isUserInput = false;
+                } else {
+                    isUserInput = true;
+                }
+                this.digit = digit;
+            }
+        }
+
+        void clearGuess() {
+            if (!isFixed) {
+                isUserInput = false;
+                digit = 0;
+                isConflictWithOthers = false;
+            }
+        }
+
+        void setIntState(int state) {
+            if (state == 0) {
+                isFixed = false;
+                isUserInput = false;
+                digit = 0;
+            } else if (state > 0) {
+                isFixed = false;
+                isUserInput = true;
+                digit = state;
+            } else {
+                isFixed = true;
+                isUserInput = false;
+                digit = -state;
+            }
+            isConflictWithOthers = false;
+        }
+
+        int getIntState() {
+            return isFixed ? -digit : digit;
         }
     }
     private BlockState[][] mBoard;
@@ -60,15 +98,10 @@ public class GameModel {
     public void clearGuess() {
         for (int r = 0; r < BOARD_ROWS; ++r) {
             for (int c = 0; c < BOARD_COLS; ++c) {
-                if (mBoard[r][c].isFilled) {
-                    if (!mBoard[r][c].isFixed) {
-                        mBoard[r][c].digit = 0;
-                        mBoard[r][c].isFilled = false;
-                    }
-                    mBoard[r][c].isConflictWithOthers = false;
-                }
+                mBoard[r][c].clearGuess();
             }
         }
+        updateConflictMarks();
     }
 
     // row is in [0, BOARD_ROWS), col is in [0, BOARD_COLS).
@@ -83,9 +116,7 @@ public class GameModel {
         if (mBoard[row][col].isFixed) {
             return;
         }
-        mBoard[row][col].isFilled = (digit == 0 ? false : true);
-        mBoard[row][col].isUserInput = (digit == 0 ? false : true);
-        mBoard[row][col].digit = digit;
+        mBoard[row][col].guess(digit);
         updateConflictMarks();
         checkSuccess();
     }
@@ -101,17 +132,7 @@ public class GameModel {
         }
         for (int r = 0; r < BOARD_ROWS; ++r) {
             for (int c = 0; c < BOARD_COLS; ++c) {
-                BlockState block = mBoard[r][c];
-                block.digit = 0;
-                block.isFixed = false;
-                block.isFilled = false;
-                block.isConflictWithOthers = false;
-                Log.d(TAG, "block[" + r + "][" + c + "] = " + intBoard[r][c]);
-                if (intBoard[r][c] < 0) {
-                    block.isFixed = true;
-                    block.isFilled = true;
-                    block.digit = - intBoard[r][c];
-                }
+                mBoard[r][c].setIntState(intBoard[r][c]);
             }
         }
         return true;
@@ -123,7 +144,7 @@ public class GameModel {
         }
         for (int i = 0; i < BOARD_ROWS; ++i) {
             for (int j = 0; j < BOARD_COLS; ++j) {
-                mIntBoard[i][j] = (mBoard[i][j].isFixed ? mBoard[i][j].digit : -mBoard[i][j].digit);
+                mIntBoard[i][j] = mBoard[i][j].getIntState();
             }
         }
         Log.d(TAG, "mIntBoard[0][1] = " + mIntBoard[0][1]);
@@ -151,7 +172,7 @@ public class GameModel {
     private void checkSuccess() {
         for (int r = 0; r < BOARD_ROWS; ++r) {
             for (int c = 0; c < BOARD_COLS; ++c) {
-                if (!mBoard[r][c].isFilled || mBoard[r][c].isConflictWithOthers) {
+                if (mBoard[r][c].digit == 0 || mBoard[r][c].isConflictWithOthers) {
                     return;
                 }
              }
@@ -188,7 +209,7 @@ public class GameModel {
     public void markFix() {
         for (int r = 0; r < BOARD_ROWS; ++r) {
             for (int c = 0; c < BOARD_COLS; ++c) {
-                if (mBoard[r][c].isUserInput && mBoard[r][c].isFilled) {
+                if (mBoard[r][c].isUserInput) {
                     if (!mBoard[r][c].isConflictWithOthers) {
                         mBoard[r][c].isFixed = true;
                     }

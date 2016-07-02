@@ -305,6 +305,13 @@ static void markFixedBlocks(Board& board, int fixedCount) {
         board.fixed[r][c] = true;
         fixedCount--;
     }
+    for (int r = 0; r < BOARD_ROWS; ++r) {
+        for (int c = 0; c < BOARD_COLS; ++c) {
+            if (!board.fixed[r][c]) {
+                board.digits[r][c] = 0;
+            }
+        }
+    }
 }
 
 static bool isPointReasonable(Board& board, int curR, int curC) {
